@@ -1,0 +1,14 @@
+.next
+node_modules
+.git
+.gitignore
+
+# env files — secrets are passed as build args, not baked in
+.env
+.env.local
+.env*.local
+
+# dev/tooling
+*.md
+.eslintrc*
+.prettierrc*
