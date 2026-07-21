@@ -7,28 +7,34 @@ import { useTheme } from "next-themes";
 /** Shared by every demo account — seeded by palan-api/Scripts/seed_demo_users.py */
 const DEMO_PASSWORD = "PalanDemo!2026";
 
+/**
+ * Clerk may ask for an email code on a new device. These are `+clerk_test`
+ * addresses, so no mail is ever sent and the code is always this value.
+ */
+const DEMO_CODE = "424242";
+
 const DEMO_ACCOUNTS = [
   {
     name: "NovaPay Fintech",
-    email: "novapay@demo.com",
+    email: "novapay+clerk_test@demo.com",
     scope: "IN · DPDP + Labour",
     meta: "Bengaluru · 45 employees · fintech",
   },
   {
     name: "EduSpark Academy",
-    email: "eduspark@demo.com",
+    email: "eduspark+clerk_test@demo.com",
     scope: "IN · Children's data",
     meta: "Hyderabad · 25 employees · edtech",
   },
   {
     name: "FreshBasket",
-    email: "freshbasket@demo.com",
+    email: "freshbasket+clerk_test@demo.com",
     scope: "IN · DPDP + Labour",
     meta: "Mumbai · 120 employees · grocery delivery",
   },
   {
     name: "DataFlow GmbH",
-    email: "dataflow@demo.com",
+    email: "dataflow+clerk_test@demo.com",
     scope: "EU · GDPR + AI Act",
     meta: "Berlin · 15 employees · B2B SaaS",
   },
@@ -146,8 +152,13 @@ export default function SignInPage() {
       </div>
 
       <p style={{ fontSize: 11.5, color: "var(--faint)", margin: "0 0 10px", lineHeight: 1.5 }}>
-        Pick a company to prefill its email, then paste the password. Each account sees a
-        different jurisdiction and document set.
+        Pick a company to prefill its email, then paste the password. If asked for an email
+        verification code, enter{" "}
+        <code style={{ fontFamily: "var(--font-mono)", color: "var(--accent-ink)" }}>
+          {DEMO_CODE}
+        </code>{" "}
+        — these are test addresses, so no mail is sent. Each account sees a different
+        jurisdiction and document set.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
