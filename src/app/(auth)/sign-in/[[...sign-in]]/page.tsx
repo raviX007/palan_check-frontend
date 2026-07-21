@@ -1,33 +1,49 @@
 "use client";
 
 import { SignIn } from "@clerk/nextjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+
+/** Shared by every demo account — seeded by palan-api/Scripts/seed_demo_users.py */
+const DEMO_PASSWORD = "PalanDemo!2026";
 
 const DEMO_ACCOUNTS = [
   {
     name: "NovaPay Fintech",
     email: "novapay@demo.com",
-    password: "demo123",
     scope: "IN · DPDP + Labour",
+    meta: "Bengaluru · 45 employees · fintech",
   },
   {
     name: "EduSpark Academy",
     email: "eduspark@demo.com",
-    password: "demo123",
     scope: "IN · Children's data",
+    meta: "Hyderabad · 25 employees · edtech",
+  },
+  {
+    name: "FreshBasket",
+    email: "freshbasket@demo.com",
+    scope: "IN · DPDP + Labour",
+    meta: "Mumbai · 120 employees · grocery delivery",
   },
   {
     name: "DataFlow GmbH",
     email: "dataflow@demo.com",
-    password: "demo123",
     scope: "EU · GDPR + AI Act",
+    meta: "Berlin · 15 employees · B2B SaaS",
   },
 ];
 
 export default function SignInPage() {
   const [email, setEmail] = useState<string | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
   const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(id);
+  }, [copied]);
   const isDark = resolvedTheme === "dark";
 
   return (
@@ -85,6 +101,55 @@ export default function SignInPage() {
         <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
       </div>
 
+      {/* One shared password for every demo account. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          background: "var(--accent-tint)",
+          borderRadius: 9,
+          padding: "10px 14px",
+          marginBottom: 10,
+        }}
+      >
+        <span style={{ fontSize: 12.5, color: "var(--ink)" }}>Password</span>
+        <code
+          style={{
+            flex: 1,
+            fontFamily: "var(--font-mono)",
+            fontSize: 12.5,
+            color: "var(--accent-ink)",
+          }}
+        >
+          {DEMO_PASSWORD}
+        </code>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(DEMO_PASSWORD).then(() => setCopied(true));
+          }}
+          style={{
+            fontSize: 11.5,
+            fontWeight: 500,
+            color: "var(--accent-ink)",
+            background: "transparent",
+            border: "1px solid var(--accent)",
+            borderRadius: "var(--radius-chip)",
+            padding: "4px 10px",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+
+      <p style={{ fontSize: 11.5, color: "var(--faint)", margin: "0 0 10px", lineHeight: 1.5 }}>
+        Pick a company to prefill its email, then paste the password. Each account sees a
+        different jurisdiction and document set.
+      </p>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {DEMO_ACCOUNTS.map((a) => (
           <button
@@ -117,8 +182,9 @@ export default function SignInPage() {
                   marginTop: 2,
                 }}
               >
-                {a.email} · {a.password}
+                {a.email}
               </div>
+              <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 2 }}>{a.meta}</div>
             </div>
             <span
               style={{
