@@ -63,7 +63,8 @@ export default function SignInPage() {
     setEmail(demoEmail);
 
     try {
-      const response = await fetch("/api/demo-signin", {
+      // Not /api/* — nginx routes that namespace to palan-api in production.
+      const response = await fetch("/demo-signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company }),

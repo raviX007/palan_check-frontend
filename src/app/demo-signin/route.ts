@@ -6,6 +6,10 @@ import { NextResponse } from "next/server";
  * No credential reaches the browser. The only thing a caller can ask for is a
  * session on one of the four sandbox tenants below — the mapping lives here,
  * server-side, so an arbitrary email can never be targeted.
+ *
+ * NOTE: deliberately NOT under /api. In production, nginx routes /api/* to the
+ * palan-api container (which runs with --root-path /api), so a Next route
+ * handler there is unreachable and returns FastAPI's 404.
  */
 
 const CLERK_API = "https://api.clerk.com/v1";
