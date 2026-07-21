@@ -1,67 +1,95 @@
 "use client";
 
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import { UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
-
-const PATH_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/chat": "Chat",
-  "/documents": "Documents",
-  "/reports": "Reports",
-  "/compare": "Compare",
-  "/eval": "Eval Suite",
-};
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useApiFetch } from "@/lib/api-client";
+import { jurisdictionPill } from "@/lib/reports";
+import { CommandPaletteChip } from "./CommandPalette";
+import { PATH_TITLES } from "./nav-items";
 
 export function TopBar({ title }: { title?: string }) {
-  const { user } = useUser();
   const pathname = usePathname();
-  const resolvedTitle = title ?? PATH_TITLES[pathname] ?? "Palan Check";
+  const apiFetch = useApiFetch();
+  const [jurisdiction, setJurisdiction] = useState<string | undefined>();
 
-  const initials = user
-    ? ((user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")).toUpperCase() ||
-      user.emailAddresses[0]?.emailAddress[0]?.toUpperCase() ||
-      "U"
-    : "U";
+  // The pill must reflect the signed-in tenant, not a hardcoded region.
+  useEffect(() => {
+    apiFetch<{ jurisdiction: string }>("/tenants/me")
+      .then((t) => setJurisdiction(t.jurisdiction))
+      .catch(() => undefined);
+  }, [apiFetch]);
+  // Nested routes (/reports/<id>) fall back to their section title.
+  const section = Object.keys(PATH_TITLES).find(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  const current = title ?? (section ? PATH_TITLES[section] : undefined) ?? "Palan Check";
 
   return (
-    <div style={{
-      height: "56px",
-      borderBottom: "1px solid var(--s200)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "0 28px",
-      background: "#fff",
-      position: "sticky",
-      top: 0,
-      zIndex: 30,
-      flexShrink: 0,
-    }}>
-      <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--s900)" }}>
-        {resolvedTitle}
-      </span>
+    <div
+      style={{
+        minHeight: 56,
+        background: "var(--topbar)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        borderBottom: "1px solid var(--border)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16,
+        padding: "0 clamp(16px, 4vw, 40px)",
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        flexShrink: 0,
+      }}
+    >
+      {/* Breadcrumb: trail is muted, the current segment is ink 500. */}
+      <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: "var(--muted)", minWidth: 0 }}>
+        <span style={{ color: "var(--muted)" }}>Palan Check</span>
+        <span aria-hidden="true" style={{ margin: "0 8px", color: "var(--faint)" }}>
+          /
+        </span>
+        <span aria-current="page" style={{ color: "var(--ink)", fontWeight: 500 }}>
+          {current}
+        </span>
+      </nav>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: "5px",
-          padding: "3px 10px", borderRadius: "100px",
-          background: "rgba(249,115,22,.08)", color: "#c2410c",
-          border: "1px solid rgba(249,115,22,.15)",
-          fontSize: "0.6875rem", fontWeight: 500,
-        }}>
-          🇮🇳 India — DPDP + Labour
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <CommandPaletteChip />
+
+        <div
+          className="palan-jurisdiction-pill"
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--muted)",
+            border: "1px solid var(--border)",
+            background: "var(--chip-bg)",
+            borderRadius: "var(--radius-pill)",
+            padding: "5px 13px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {jurisdictionPill(jurisdiction)}
         </div>
 
-        <div style={{
-          width: "30px", height: "30px", borderRadius: "50%",
-          background: "var(--brand-600)", color: "#fff",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "0.6875rem", fontWeight: 700, flexShrink: 0,
-        }}>
-          {initials}
-        </div>
+        <ThemeToggle />
 
-        <UserButton />
+        {/* Sign-out lives here, not in the sidebar — the top bar survives the
+            <920px collapse where the sidebar disappears. */}
+        <UserButton
+          appearance={{
+            elements: {
+              avatarBox: { width: 30, height: 30 },
+              userButtonPopoverCard: {
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+              },
+            },
+          }}
+        />
       </div>
     </div>
   );

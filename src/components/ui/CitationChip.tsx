@@ -1,29 +1,50 @@
+import { CSSProperties } from "react";
+
+const CHIP: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11.5,
+  color: "var(--muted)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-chip)",
+  padding: "4px 10px",
+  background: "var(--chip-bg)",
+  textDecoration: "none",
+  display: "inline-block",
+  whiteSpace: "nowrap",
+  transition: "border-color .15s, color .15s",
+};
+
 interface CitationChipProps {
-  label: string;
+  children: React.ReactNode;
+  /** Target statute/document — usually a /compare deep link. */
+  href?: string;
   onClick?: () => void;
+  title?: string;
 }
 
-export function CitationChip({ label, onClick }: CitationChipProps) {
+/**
+ * Anything clickable is a real <a> or <button> — never a div/span with onClick.
+ * Hover (accent border + accent-ink text) lives in globals.css (.palan-cite).
+ */
+export function CitationChip({ children, href, onClick, title }: CitationChipProps) {
+  if (href) {
+    return (
+      <a className="palan-cite" href={href} title={title} style={CHIP}>
+        {children}
+      </a>
+    );
+  }
+  if (onClick) {
+    return (
+      <button className="palan-cite" type="button" onClick={onClick} title={title}
+        style={{ ...CHIP, cursor: "pointer" }}>
+        {children}
+      </button>
+    );
+  }
   return (
-    <span
-      onClick={onClick}
-      title={label}
-      style={{
-        fontFamily: "var(--font-m)", fontSize: "0.6875rem",
-        background: "var(--brand-50)", color: "var(--brand-700)",
-        border: "1px solid var(--brand-200)", padding: "3px 10px",
-        borderRadius: "4px", cursor: onClick ? "pointer" : "default",
-        display: "inline-block", whiteSpace: "nowrap",
-        transition: "background .15s",
-      }}
-      onMouseEnter={(e) => {
-        if (onClick) (e.currentTarget as HTMLElement).style.background = "var(--brand-100)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "var(--brand-50)";
-      }}
-    >
-      {label}
+    <span title={title} style={CHIP}>
+      {children}
     </span>
   );
 }

@@ -2,83 +2,140 @@
 
 import { SignIn } from "@clerk/nextjs";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
 const DEMO_ACCOUNTS = [
-  { flag: "🇮🇳", name: "NovaPay Fintech",   email: "novapay@demo.com",   password: "demo123", badge: "DPDP + Labour",    badgeType: "india" },
-  { flag: "🇮🇳", name: "EduSpark Academy",  email: "eduspark@demo.com",  password: "demo123", badge: "Children's Data", badgeType: "india" },
-  { flag: "🇪🇺", name: "DataFlow GmbH",     email: "dataflow@demo.com",  password: "demo123", badge: "GDPR + AI Act",   badgeType: "eu"    },
+  {
+    name: "NovaPay Fintech",
+    email: "novapay@demo.com",
+    password: "demo123",
+    scope: "IN · DPDP + Labour",
+  },
+  {
+    name: "EduSpark Academy",
+    email: "eduspark@demo.com",
+    password: "demo123",
+    scope: "IN · Children's data",
+  },
+  {
+    name: "DataFlow GmbH",
+    email: "dataflow@demo.com",
+    password: "demo123",
+    scope: "EU · GDPR + AI Act",
+  },
 ];
 
 export default function SignInPage() {
   const [email, setEmail] = useState<string | undefined>(undefined);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
     <div>
+      {/* Matched to the design via Clerk's appearance variables rather than
+          rebuilding the form with Clerk Elements. */}
       <SignIn
-        key={email}
-        fallbackRedirectUrl="/"
+        key={`${email}-${resolvedTheme}`}
+        fallbackRedirectUrl="/dashboard"
         initialValues={email ? { emailAddress: email } : undefined}
         appearance={{
           layout: { socialButtonsVariant: "iconButton" },
+          variables: {
+            colorPrimary: isDark ? "#6D7BE8" : "#4050C6",
+            colorText: isDark ? "#E8EAF0" : "#171C26",
+            colorBackground: isDark ? "#171B23" : "#FFFFFF",
+            colorInputBackground: isDark ? "#12151C" : "#F7F8FA",
+            colorInputText: isDark ? "#E8EAF0" : "#171C26",
+            colorTextSecondary: isDark ? "#9AA3B2" : "#5C6470",
+            borderRadius: "8px",
+            fontFamily: "var(--font-sans)",
+          },
           elements: {
-            rootBox: "w-full",
-            card: "shadow-none border border-slate-200 rounded-xl",
-            headerTitle: "hidden",
-            headerSubtitle: "hidden",
-            formButtonPrimary: "bg-brand-600 hover:bg-brand-700 text-sm font-semibold rounded-lg",
-            formFieldInput: "rounded-lg text-sm",
-            formFieldLabel: "text-slate-700 text-xs font-medium",
-            footerActionLink: "text-brand-600 font-medium",
-            footer: "hidden",
+            rootBox: { width: "100%" },
+            card: {
+              boxShadow: "none",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-card)",
+              background: "var(--surface)",
+            },
+            headerTitle: { fontSize: "18px", fontWeight: 600, letterSpacing: "-0.01em" },
+            headerSubtitle: { fontSize: "13px", color: "var(--muted)" },
+            formButtonPrimary: { fontSize: "13px", fontWeight: 500, textTransform: "none" },
+            formFieldInput: { fontSize: "13.5px" },
+            formFieldLabel: { fontSize: "12.5px", fontWeight: 500 },
           },
         }}
       />
 
-      {/* Demo accounts */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: "12px",
-        margin: "20px 0 16px", fontSize: "0.75rem", color: "var(--s400)",
-      }}>
-        <span style={{ flex: 1, height: "1px", background: "var(--s200)", display: "block" }} />
-        Demo accounts — click to prefill
-        <span style={{ flex: 1, height: "1px", background: "var(--s200)", display: "block" }} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          margin: "24px 0 12px",
+          fontSize: 11.5,
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--faint)",
+        }}
+      >
+        <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
+        Demo accounts
+        <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {DEMO_ACCOUNTS.map((a) => (
           <button
             key={a.email}
+            type="button"
             onClick={() => setEmail(a.email)}
+            className="palan-demo-account"
             style={{
-              display: "flex", alignItems: "center", gap: "10px",
-              padding: "8px 12px", borderRadius: "8px", cursor: "pointer",
-              border: "1px solid transparent", background: "transparent",
-              width: "100%", textAlign: "left", fontFamily: "var(--font-b)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--brand-50)";
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--brand-200)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.borderColor = "transparent";
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "10px 12px",
+              minHeight: 36,
+              borderRadius: "var(--radius-item)",
+              cursor: "pointer",
+              border: "1px solid transparent",
+              background: "transparent",
+              width: "100%",
+              textAlign: "left",
+              fontFamily: "var(--font-sans)",
             }}
           >
-            <span style={{ fontSize: "0.875rem", flexShrink: 0 }}>{a.flag}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--s800)" }}>{a.name}</div>
-              <div style={{ fontSize: "0.6875rem", color: "var(--s500)", fontFamily: "var(--font-m)" }}>
-                {a.email} · pw: {a.password}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{a.name}</div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--faint)",
+                  fontFamily: "var(--font-mono)",
+                  marginTop: 2,
+                }}
+              >
+                {a.email} · {a.password}
               </div>
             </div>
-            <span style={{
-              fontSize: "0.5625rem", fontWeight: 500, padding: "2px 8px",
-              borderRadius: "100px", flexShrink: 0,
-              ...(a.badgeType === "india"
-                ? { background: "rgba(249,115,22,.08)", color: "#c2410c", border: "1px solid rgba(249,115,22,.15)" }
-                : { background: "rgba(37,99,235,.08)", color: "#1d4ed8", border: "1px solid rgba(37,99,235,.15)" }),
-            }}>
-              {a.badge}
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                background: "var(--chip-bg)",
+                border: "1px solid var(--border)",
+                borderRadius: 5,
+                padding: "3px 8px",
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {a.scope}
             </span>
           </button>
         ))}

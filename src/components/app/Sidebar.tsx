@@ -2,120 +2,107 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { CompanySwitcher } from "./CompanySwitcher";
-
-const NAV = [
-  {
-    href: "/dashboard", label: "Dashboard",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
-  },
-  {
-    href: "/chat", label: "Chat",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-  },
-  {
-    href: "/documents", label: "Documents",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>,
-  },
-  {
-    href: "/reports", label: "Reports",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,
-  },
-  {
-    href: "/compare", label: "Compare",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="16" height="16"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>,
-  },
-];
-
-const RECENT = [
-  "Does NovaPay need a DPO?",
-  "Contract worker obligations",
-  "Privacy policy gaps",
-];
+import { NAV } from "./nav-items";
 
 const s = {
-  sidebar: {
-    width: "224px", background: "var(--s900)", padding: "20px 12px",
-    position: "fixed" as const, height: "100vh", display: "flex",
-    flexDirection: "column" as const, overflowY: "auto" as const, zIndex: 40,
-  },
-  logo: { display: "flex", alignItems: "center", gap: "10px", padding: "4px 12px", marginBottom: "24px" },
+  logo: { display: "flex", alignItems: "center", gap: "10px", padding: "0 24px 28px 24px" },
   mark: {
-    width: "28px", height: "28px", background: "var(--brand-600)", borderRadius: "6px",
+    width: "26px", height: "26px", background: "var(--accent)", borderRadius: "6px",
     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  name: { fontWeight: 700, fontSize: "0.9375rem", color: "#fff" },
+  name: { fontWeight: 600, fontSize: "17px", letterSpacing: "-0.01em", color: "var(--ink)" },
+  nav: { display: "flex", flexDirection: "column" as const, gap: "2px", padding: "0 14px" },
   label: {
-    fontSize: "0.5625rem", fontWeight: 600, color: "var(--s500)",
-    textTransform: "uppercase" as const, letterSpacing: "0.08em",
-    padding: "16px 12px 6px",
+    fontSize: "10.5px", fontWeight: 600, color: "var(--faint)",
+    textTransform: "uppercase" as const, letterSpacing: "0.12em",
+    padding: "0 12px 8px 12px",
   },
+  section: { padding: "26px 14px 0 14px" },
+  /** Active state is a tinted pill — never a left accent bar. */
   item: (active: boolean): React.CSSProperties => ({
     display: "flex", alignItems: "center", gap: "9px", padding: "8px 12px",
-    borderRadius: "6px", fontSize: "0.8125rem", fontWeight: 500,
-    color: active ? "#fff" : "var(--s400)",
-    background: active ? "var(--brand-600)" : "transparent",
-    cursor: "pointer", marginBottom: "1px", textDecoration: "none",
-    transition: "all .15s",
+    minHeight: 36, borderRadius: "var(--radius-item)", fontSize: "13.5px",
+    fontWeight: active ? 600 : 500,
+    color: active ? "var(--accent-ink)" : "var(--muted)",
+    background: active ? "var(--accent-tint)" : "transparent",
+    textDecoration: "none",
   }),
-  companyBox: { padding: "10px 12px", marginTop: "4px" },
-  companyName: { fontSize: "0.8125rem", fontWeight: 600, color: "#fff", display: "flex", alignItems: "center", gap: "6px" },
-  companyMeta: { fontSize: "0.6875rem", color: "var(--s500)", marginTop: "2px" },
-  recentWrap: { padding: "4px 12px" },
-  recentItem: { fontSize: "0.6875rem", color: "var(--s500)", padding: "5px 0", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+  recentItem: {
+    display: "block", padding: "6px 12px", fontSize: "12.5px", color: "var(--muted)",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
+    textDecoration: "none",
+  },
   spacer: { flex: 1 },
-  adminWrap: { padding: "0 12px", marginBottom: "8px" },
-  adminItem: {
-    display: "flex", alignItems: "center", gap: "9px", padding: "8px 12px",
-    borderRadius: "6px", fontSize: "0.8125rem", fontWeight: 500,
-    color: "var(--s500)", cursor: "pointer", textDecoration: "none",
+  bottom: { padding: "14px 14px 0 14px", borderTop: "1px solid var(--border)", marginTop: "16px" },
+  bottomItem: {
+    display: "block", padding: "8px 12px", borderRadius: "var(--radius-item)", fontSize: "13px",
+    color: "var(--muted)", fontWeight: 500, textDecoration: "none",
   },
 };
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+  // Eval Suite is internal tooling. Hiding the link is UX; proxy.ts is the guard.
+  const isAdmin = user?.publicMetadata?.role === "admin";
 
   return (
-    <aside style={s.sidebar}>
+    <aside className="palan-sidebar">
       <Link href="/" style={{ ...s.logo, textDecoration: "none" }}>
         <div style={s.mark}>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" strokeWidth="2">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--on-accent)" strokeWidth="2">
             <path d="M12 3L1 9l11 6 9-4.91V17M4 11.16V17l8 4 8-4v-5.84" />
           </svg>
         </div>
         <span style={s.name}>Palan Check</span>
       </Link>
 
-      <div style={s.label}>Navigation</div>
-      {NAV.map(({ href, label, icon }) => (
-        <Link key={href} href={href} style={s.item(pathname === href)}>
-          {icon} {label}
-        </Link>
-      ))}
+      <nav style={s.nav} aria-label="Primary">
+        <div style={s.label}>Navigation</div>
+        {NAV.map(({ href, label, icon }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className="palan-navlink"
+              style={s.item(active)}
+            >
+              {icon}
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
 
-      <div style={s.label}>Company</div>
-      <div style={s.companyBox}>
+      <div style={s.section}>
+        <div style={s.label}>Company</div>
         <CompanySwitcher />
       </div>
 
-      <div style={s.label}>Recent Queries</div>
-      <div style={s.recentWrap}>
-        {RECENT.map((q) => (
-          <div key={q} style={s.recentItem}>"{q}"</div>
-        ))}
-      </div>
+      {/* Recent chats stay hidden until palan-api stores conversation history —
+          showing sample questions here reads as this tenant's own activity. */}
 
       <div style={s.spacer} />
 
-      <div style={s.label}>Admin</div>
-      <div style={s.adminWrap}>
-        <Link href="/eval" style={s.adminItem}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
-            <path d="M8.5 2h7"/>
-          </svg>
-          Eval Suite
-        </Link>
+      <div style={s.bottom}>
+        {isAdmin && (
+          <Link href="/eval" className="palan-navlink" style={s.bottomItem}>
+            Eval Suite
+          </Link>
+        )}
+        {/* TODO: no /help route exists yet — kept inert rather than 404ing. */}
+        <a
+          href="#"
+          title="Product guide, scoring methodology and FAQs"
+          className="palan-navlink"
+          style={s.bottomItem}
+        >
+          Help &amp; documentation
+        </a>
       </div>
     </aside>
   );

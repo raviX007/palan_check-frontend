@@ -1,21 +1,20 @@
-import { CSSProperties } from "react";
+import { HTMLAttributes } from "react";
 
-interface CardProps {
-  children: React.ReactNode;
-  padding?: string;
-  style?: CSSProperties;
-}
-
-export function Card({ children, padding = "20px 24px", style }: CardProps) {
+/**
+ * The one container. No shadows — shadows are reserved for overlays
+ * (command palette, popovers, menus).
+ */
+export function Card({ style, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid var(--s200)",
-      borderRadius: "10px",
-      padding,
-      ...style,
-    }}>
-      {children}
-    </div>
+    <div
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-card)",
+        padding: "24px 28px",
+        ...style,
+      }}
+      {...rest}
+    />
   );
 }

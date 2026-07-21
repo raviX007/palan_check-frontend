@@ -3,11 +3,15 @@
 import { useState, useRef, useEffect, useCallback, DragEvent } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/lib/api-client";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const MAX_MB = 10;
 
 type DocStatus = "processing" | "embedded" | "failed";
 type Jurisdiction = "in" | "eu";
+type Tab = "corpus" | "company";
 
 interface CompanyDoc {
   id: string;
@@ -15,8 +19,10 @@ interface CompanyDoc {
   pages: number | null;
   sections: number | null;
   status: DocStatus;
-  progress?: number;
   uploadedAt: string;
+  /** Set while the POST is in flight — we have no byte-level progress. */
+  uploading?: boolean;
+  error?: string;
 }
 
 interface RegulatoryDoc {
@@ -26,6 +32,8 @@ interface RegulatoryDoc {
   sections: number | null;
   status: DocStatus;
   jurisdiction: Jurisdiction;
+  uploading?: boolean;
+  error?: string;
 }
 
 interface ApiDoc {
@@ -75,66 +83,85 @@ function toRegulatoryDoc(d: ApiDoc): RegulatoryDoc {
   };
 }
 
-function StatusBadge({ status, progress }: { status: DocStatus; progress?: number }) {
-  if (status === "embedded") {
-    return (
-      <span style={{
-        fontSize: "0.6875rem", fontWeight: 500, padding: "3px 10px", borderRadius: "100px",
-        display: "inline-flex", alignItems: "center", gap: "4px",
-        background: "var(--green-50)", color: "var(--green-700)", border: "1px solid rgba(34,197,94,.2)",
-      }}>✓ Ready</span>
-    );
-  }
-  if (status === "failed") {
-    return (
-      <span style={{
-        fontSize: "0.6875rem", fontWeight: 500, padding: "3px 10px", borderRadius: "100px",
-        display: "inline-flex", alignItems: "center", gap: "4px",
-        background: "var(--red-50)", color: "var(--red-700)", border: "1px solid rgba(239,68,68,.2)",
-      }}>✗ Failed</span>
-    );
-  }
-  return (
-    <div>
-      <span style={{
-        fontSize: "0.6875rem", fontWeight: 500, padding: "3px 10px", borderRadius: "100px",
-        display: "inline-flex", alignItems: "center", gap: "4px",
-        background: "var(--blue-50)", color: "#1d4ed8", border: "1px solid rgba(59,130,246,.2)",
-      }}>⏳ Processing</span>
-      {progress !== undefined && (
-        <div style={{ height: "4px", background: "var(--s200)", borderRadius: "2px", marginTop: "6px", width: "140px" }}>
-          <div style={{ height: "100%", background: "var(--blue-500)", borderRadius: "2px", width: `${progress}%`, transition: "width .3s" }} />
-        </div>
-      )}
-    </div>
-  );
+const ACRONYMS = new Set([
+  "dpdp", "gdpr", "eu", "rbi", "it", "osh", "dsa", "dora", "nis2", "crr",
+  "mifid", "edpb", "sccs", "cert", "in", "ai", "hr", "pwc", "ey", "spdi",
+]);
+
+/**
+ * Rows show a readable title over the raw filename. This is a presentation
+ * transform only — the exact filename is always displayed beneath it.
+ */
+function humanTitle(filename: string): string {
+  const base = filename.replace(/\.[^.]+$/, "").replace(/^\d+[-_\s]*/, "");
+  const words = base.split(/[-_\s]+/).filter(Boolean);
+  if (words.length === 0) return filename;
+  return words
+    .map((w) =>
+      ACRONYMS.has(w.toLowerCase())
+        ? w.toUpperCase()
+        : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(" ");
 }
 
+function contentsLabel(pages: number | null, sections: number | null): string {
+  const parts: string[] = [];
+  if (pages != null) parts.push(`${pages} page${pages === 1 ? "" : "s"}`);
+  if (sections != null) parts.push(`${sections} section${sections === 1 ? "" : "s"}`);
+  return parts.length ? parts.join(" · ") : "—";
+}
 
-const TH: React.CSSProperties = {
-  textAlign: "left", padding: "10px 16px", fontSize: "0.6875rem", fontWeight: 600,
-  textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--s500)",
-  background: "var(--s50)", borderBottom: "1px solid var(--s200)",
-};
-const TD: React.CSSProperties = {
-  padding: "12px 16px", borderBottom: "1px solid var(--s100)", verticalAlign: "top",
+function StatusCell({ status }: { status: DocStatus }) {
+  if (status === "embedded") return <Badge level="ok">Ready</Badge>;
+  if (status === "failed") return <Badge level="high">Failed</Badge>;
+  return <Badge level="low">Processing</Badge>;
+}
+
+const HEADER_ROW: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 16,
+  padding: "12px 24px",
+  borderBottom: "1px solid var(--border-soft)",
+  fontSize: 10.5,
+  fontWeight: 600,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "var(--faint)",
 };
 
-const JURISDICTION_LABELS: Record<Jurisdiction, string> = { in: "🇮🇳 India", eu: "🇪🇺 EU" };
+const DATA_ROW: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 16,
+  padding: "14px 24px",
+  borderBottom: "1px solid var(--border-soft)",
+};
+
+const TABLE_SHELL: React.CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-card)",
+  overflow: "hidden",
+};
 
 export default function DocumentsPage() {
   const apiFetch = useApiFetch();
   const { getToken } = useAuth();
 
+  const [tab, setTab] = useState<Tab>("corpus");
+
   const [regulatoryDocs, setRegulatoryDocs] = useState<RegulatoryDoc[]>([]);
   const [regJurisdiction, setRegJurisdiction] = useState<Jurisdiction>("in");
-  const [regUploading, setRegUploading] = useState(false);
   const regFileRef = useRef<HTMLInputElement>(null);
 
   const [docs, setDocs] = useState<CompanyDoc[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  /** Retained so a failed upload can be retried without re-picking the file. */
+  const pendingFiles = useRef<Map<string, File>>(new Map());
 
   const fetchCompanyDocs = useCallback(() => {
     apiFetch<ApiDoc[]>("/documents/?doc_type=company")
@@ -148,19 +175,23 @@ export default function DocumentsPage() {
       .catch(() => null);
   }, [apiFetch, regJurisdiction]);
 
-  useEffect(() => { fetchCompanyDocs(); }, [fetchCompanyDocs]);
-  useEffect(() => { fetchRegulatoryDocs(); }, [fetchRegulatoryDocs]);
+  useEffect(() => {
+    fetchCompanyDocs();
+  }, [fetchCompanyDocs]);
+  useEffect(() => {
+    fetchRegulatoryDocs();
+  }, [fetchRegulatoryDocs]);
 
   // Poll every 4s while any document is still processing
   useEffect(() => {
-    const hasPending = docs.some((d) => d.status === "processing");
+    const hasPending = docs.some((d) => d.status === "processing" && !d.uploading);
     if (!hasPending) return;
     const id = setInterval(fetchCompanyDocs, 4000);
     return () => clearInterval(id);
   }, [docs, fetchCompanyDocs]);
 
   useEffect(() => {
-    const hasPending = regulatoryDocs.some((d) => d.status === "processing");
+    const hasPending = regulatoryDocs.some((d) => d.status === "processing" && !d.uploading);
     if (!hasPending) return;
     const id = setInterval(fetchRegulatoryDocs, 4000);
     return () => clearInterval(id);
@@ -178,6 +209,8 @@ export default function DocumentsPage() {
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
+  /** Company documents are tenant-owned, so they can be deleted.
+   *  The regulatory corpus is shared and read-only — no delete path here. */
   async function deleteDoc(id: string) {
     try {
       await apiFetch(`/documents/${id}`, { method: "DELETE" });
@@ -187,72 +220,174 @@ export default function DocumentsPage() {
     }
   }
 
-  async function deleteRegulatoryDoc(id: string) {
-    try {
-      await apiFetch(`/documents/${id}`, { method: "DELETE" });
-      setRegulatoryDocs((prev) => prev.filter((d) => d.id !== id));
-    } catch {
-      alert("Failed to delete document. Please try again.");
+  function rejectReason(file: File): string | null {
+    if (file.size > MAX_MB * 1024 * 1024) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      return `Upload failed: the file is ${mb} MB, over the ${MAX_MB} MB limit. Compress or split it, then retry.`;
     }
+    if (!/\.(pdf|docx)$/i.test(file.name)) {
+      return "Upload failed: only PDF and DOCX files are supported. Convert the file, then retry.";
+    }
+    return null;
   }
 
-  async function addFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setUploading(true);
+  const uploadCompany = useCallback(
+    async (file: File, tempId: string) => {
+      pendingFiles.current.set(tempId, file);
 
-    for (const file of Array.from(files)) {
-      const tempId = `temp-${Date.now()}-${file.name}`;
-      setDocs((prev) => [{
-        id: tempId, name: file.name, pages: null, sections: null,
-        status: "processing", uploadedAt: "Just now", progress: 50,
-      }, ...prev]);
+      const reason = rejectReason(file);
+      if (reason) {
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === tempId ? { ...d, status: "failed", uploading: false, error: reason } : d,
+          ),
+        );
+        return;
+      }
 
       try {
         const form = new FormData();
         form.append("file", file);
         form.append("doc_type", "company");
-
         const created = await apiFetch<ApiDoc>("/documents/upload", {
-          method: "POST", body: form, headers: {},
+          method: "POST",
+          body: form,
+          headers: {},
         });
-        setDocs((prev) => prev.map((d) => d.id === tempId ? toCompanyDoc(created) : d));
-      } catch {
-        setDocs((prev) => prev.map((d) =>
-          d.id === tempId ? { ...d, status: "failed" as DocStatus, progress: undefined } : d
-        ));
+        pendingFiles.current.delete(tempId);
+        setDocs((prev) => prev.map((d) => (d.id === tempId ? toCompanyDoc(created) : d)));
+      } catch (err) {
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === tempId
+              ? {
+                  ...d,
+                  status: "failed",
+                  uploading: false,
+                  error: `Upload failed: ${
+                    err instanceof Error ? err.message : "the server rejected the file"
+                  }. Check the file, then retry.`,
+                }
+              : d,
+          ),
+        );
       }
-    }
-    setUploading(false);
-  }
+    },
+    [apiFetch],
+  );
 
-  async function addRegulatoryFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setRegUploading(true);
+  const uploadRegulatory = useCallback(
+    async (file: File, tempId: string) => {
+      pendingFiles.current.set(tempId, file);
 
-    for (const file of Array.from(files)) {
-      const tempId = `temp-reg-${Date.now()}-${file.name}`;
-      setRegulatoryDocs((prev) => [{
-        id: tempId, name: file.name, pages: null, sections: null,
-        status: "processing", jurisdiction: regJurisdiction,
-      }, ...prev]);
+      const reason = rejectReason(file);
+      if (reason) {
+        setRegulatoryDocs((prev) =>
+          prev.map((d) =>
+            d.id === tempId ? { ...d, status: "failed", uploading: false, error: reason } : d,
+          ),
+        );
+        return;
+      }
 
       try {
         const form = new FormData();
         form.append("file", file);
         form.append("doc_type", "regulatory");
         form.append("jurisdiction", regJurisdiction);
-
         const created = await apiFetch<ApiDoc>("/documents/upload", {
-          method: "POST", body: form, headers: {},
+          method: "POST",
+          body: form,
+          headers: {},
         });
-        setRegulatoryDocs((prev) => prev.map((d) => d.id === tempId ? toRegulatoryDoc(created) : d));
-      } catch {
-        setRegulatoryDocs((prev) => prev.map((d) =>
-          d.id === tempId ? { ...d, status: "failed" as DocStatus } : d
-        ));
+        pendingFiles.current.delete(tempId);
+        setRegulatoryDocs((prev) =>
+          prev.map((d) => (d.id === tempId ? toRegulatoryDoc(created) : d)),
+        );
+      } catch (err) {
+        setRegulatoryDocs((prev) =>
+          prev.map((d) =>
+            d.id === tempId
+              ? {
+                  ...d,
+                  status: "failed",
+                  uploading: false,
+                  error: `Upload failed: ${
+                    err instanceof Error ? err.message : "the server rejected the file"
+                  }. Check the file, then retry.`,
+                }
+              : d,
+          ),
+        );
       }
+    },
+    [apiFetch, regJurisdiction],
+  );
+
+  async function addFiles(files: FileList | null) {
+    if (!files?.length) return;
+    for (const file of Array.from(files)) {
+      const tempId = `temp-${Date.now()}-${file.name}`;
+      setDocs((prev) => [
+        {
+          id: tempId,
+          name: file.name,
+          pages: null,
+          sections: null,
+          status: "processing",
+          uploadedAt: "Just now",
+          uploading: true,
+        },
+        ...prev,
+      ]);
+      await uploadCompany(file, tempId);
     }
-    setRegUploading(false);
+  }
+
+  async function addRegulatoryFiles(files: FileList | null) {
+    if (!files?.length) return;
+    for (const file of Array.from(files)) {
+      const tempId = `temp-reg-${Date.now()}-${file.name}`;
+      setRegulatoryDocs((prev) => [
+        {
+          id: tempId,
+          name: file.name,
+          pages: null,
+          sections: null,
+          status: "processing",
+          jurisdiction: regJurisdiction,
+          uploading: true,
+        },
+        ...prev,
+      ]);
+      await uploadRegulatory(file, tempId);
+    }
+  }
+
+  function retry(id: string, kind: Tab) {
+    const file = pendingFiles.current.get(id);
+    if (!file) return;
+    if (kind === "company") {
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === id ? { ...d, status: "processing", uploading: true, error: undefined } : d,
+        ),
+      );
+      uploadCompany(file, id);
+    } else {
+      setRegulatoryDocs((prev) =>
+        prev.map((d) =>
+          d.id === id ? { ...d, status: "processing", uploading: true, error: undefined } : d,
+        ),
+      );
+      uploadRegulatory(file, id);
+    }
+  }
+
+  function removeFailed(id: string, kind: Tab) {
+    pendingFiles.current.delete(id);
+    if (kind === "company") setDocs((prev) => prev.filter((d) => d.id !== id));
+    else setRegulatoryDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
@@ -262,234 +397,514 @@ export default function DocumentsPage() {
   }
 
   const displayedRegDocs = regulatoryDocs.filter((d) => d.jurisdiction === regJurisdiction);
+  const corpusActive = tab === "corpus";
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: "10px 16px",
+    fontSize: 13.5,
+    fontWeight: active ? 600 : 500,
+    color: active ? "var(--ink)" : "var(--muted)",
+    background: "transparent",
+    border: "none",
+    borderBottom: `2px solid ${active ? "var(--accent)" : "transparent"}`,
+    marginBottom: -1,
+    cursor: "pointer",
+    minHeight: 36,
+  });
+
+  const segStyle = (active: boolean): React.CSSProperties => ({
+    padding: "7px 16px",
+    fontSize: 12.5,
+    fontWeight: 500,
+    cursor: "pointer",
+    color: active ? "var(--on-accent)" : "var(--muted)",
+    background: active ? "var(--accent)" : "transparent",
+    border: "none",
+    minHeight: 36,
+  });
 
   return (
-    <div style={{ maxWidth: "1000px" }}>
-
-      {/* ── Regulatory Corpus ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", paddingTop: 16 }}>
+      {/* Header — one primary CTA, contextual to the active tab. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 24,
+          flexWrap: "wrap",
+        }}
+      >
         <div>
-          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--s700)" }}>
-            📜 Regulatory Corpus
-          </span>
-          <span style={{ fontSize: "0.8125rem", fontWeight: 400, color: "var(--s400)", marginLeft: "6px" }}>
-            (shared across all tenants)
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {(["in", "eu"] as Jurisdiction[]).map((j) => (
-            <button
-              key={j}
-              onClick={() => setRegJurisdiction(j)}
-              style={{
-                padding: "5px 14px", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 500,
-                cursor: "pointer", border: "1px solid",
-                background: regJurisdiction === j ? "var(--brand-600)" : "#fff",
-                color: regJurisdiction === j ? "#fff" : "var(--s600)",
-                borderColor: regJurisdiction === j ? "var(--brand-600)" : "var(--s200)",
-                transition: "all .15s",
-              }}
-            >
-              {JURISDICTION_LABELS[j]}
-            </button>
-          ))}
-          <button
-            onClick={() => regFileRef.current?.click()}
-            disabled={regUploading}
+          <h1
             style={{
-              display: "inline-flex", alignItems: "center", gap: "6px",
-              padding: "6px 14px", background: "var(--s800)", color: "#fff",
-              border: "none", borderRadius: "8px", fontSize: "0.75rem",
-              fontWeight: 600, fontFamily: "var(--font-b)", cursor: regUploading ? "not-allowed" : "pointer",
-              opacity: regUploading ? 0.7 : 1,
+              fontFamily: "var(--font-sans)",
+              fontWeight: 600,
+              fontSize: 24,
+              letterSpacing: "-0.02em",
+              margin: "0 0 10px 0",
+              lineHeight: 1.15,
+              color: "var(--ink)",
             }}
           >
-            {regUploading ? "⏳ Uploading…" : "📤 Upload Regulation"}
-          </button>
-          <input
-            ref={regFileRef}
-            type="file"
-            multiple
-            accept=".pdf,.docx"
-            style={{ display: "none" }}
-            onChange={(e) => { addRegulatoryFiles(e.target.files); e.target.value = ""; }}
-          />
+            Documents
+          </h1>
+          <div style={{ fontSize: 13, color: "var(--muted)" }}>
+            The regulatory corpus your answers cite, and your own policies under review.
+          </div>
         </div>
-      </div>
 
-      <div style={{ border: "1px solid var(--s200)", borderRadius: "10px", overflow: "hidden", background: "#fff", marginBottom: "32px" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={TH}>Document</th>
-              <th style={{ ...TH, textAlign: "center" }}>Pages</th>
-              <th style={{ ...TH, textAlign: "center" }}>Sections</th>
-              <th style={TH}>Status</th>
-              <th style={{ ...TH, width: "40px" }} />
-            </tr>
-          </thead>
-          <tbody>
-            {displayedRegDocs.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ ...TD, textAlign: "center", color: "var(--s400)", padding: "32px", borderBottom: "none" }}>
-                  No {JURISDICTION_LABELS[regJurisdiction]} regulatory documents yet — upload one above.
-                </td>
-              </tr>
-            ) : (
-              displayedRegDocs.map((doc, i) => {
-                const last = i === displayedRegDocs.length - 1;
-                const cell: React.CSSProperties = { ...TD, borderBottom: last ? "none" : "1px solid var(--s100)" };
-                const isTemp = doc.id.startsWith("temp-");
-                return (
-                  <tr key={doc.id}>
-                    <td style={cell}>
-                      <span
-                        onClick={() => !isTemp && openDocument(doc.id)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "6px",
-                          fontSize: "0.8125rem", fontWeight: 500, color: "var(--s800)",
-                          cursor: isTemp ? "default" : "pointer",
-                        }}
-                        onMouseEnter={(e) => { if (!isTemp) (e.currentTarget as HTMLElement).style.color = "var(--brand-600)"; }}
-                        onMouseLeave={(e) => { if (!isTemp) (e.currentTarget as HTMLElement).style.color = "var(--s800)"; }}
-                      >
-                        📜 {doc.name}
-                      </span>
-                    </td>
-                    <td style={{ ...cell, textAlign: "center", fontSize: "0.8125rem", color: "var(--s600)" }}>{doc.pages ?? "—"}</td>
-                    <td style={{ ...cell, textAlign: "center", fontFamily: "var(--font-m)", fontSize: "0.75rem", color: "var(--s500)" }}>{doc.sections ?? "—"}</td>
-                    <td style={cell}><StatusBadge status={doc.status} /></td>
-                    <td style={cell}>
-                      <button
-                        onClick={() => deleteRegulatoryDoc(doc.id)}
-                        title="Delete"
-                        style={{ color: "var(--s400)", cursor: "pointer", fontSize: "0.875rem", background: "none", border: "none", padding: "4px" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--red-500)")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--s400)")}
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Company Documents ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-        <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--s700)" }}>
-          📄 Company Documents
-        </span>
         <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
+          type="button"
+          onClick={() => (corpusActive ? regFileRef.current : fileRef.current)?.click()}
+          className="palan-btn palan-btn-primary"
           style={{
-            display: "inline-flex", alignItems: "center", gap: "6px",
-            padding: "8px 16px", background: "var(--brand-600)", color: "#fff",
-            border: "none", borderRadius: "8px", fontSize: "0.8125rem",
-            fontWeight: 600, fontFamily: "var(--font-b)", cursor: uploading ? "not-allowed" : "pointer",
-            opacity: uploading ? 0.7 : 1,
+            flexShrink: 0,
+            fontFamily: "var(--font-sans)",
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--on-accent)",
+            background: "var(--accent)",
+            border: "1px solid var(--accent)",
+            borderRadius: "var(--radius-control)",
+            padding: "10px 18px",
+            minHeight: 36,
+            cursor: "pointer",
           }}
         >
-          {uploading ? "⏳ Uploading…" : "📤 Upload Document"}
+          {corpusActive ? "Upload regulation" : "Upload document"}
         </button>
       </div>
 
-      <div style={{ border: "1px solid var(--s200)", borderRadius: "10px", overflow: "hidden", background: "#fff", marginBottom: "16px" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={TH}>Document</th>
-              <th style={{ ...TH, textAlign: "center" }}>Pages</th>
-              <th style={{ ...TH, textAlign: "center" }}>Sections</th>
-              <th style={TH}>Status</th>
-              <th style={{ ...TH, width: "40px" }} />
-            </tr>
-          </thead>
-          <tbody>
-            {docs.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ ...TD, textAlign: "center", color: "var(--s400)", padding: "32px", borderBottom: "none" }}>
-                  No documents yet — upload your first file below.
-                </td>
-              </tr>
-            ) : (
-              docs.map((doc, i) => {
-                const last = i === docs.length - 1;
-                const cell: React.CSSProperties = { ...TD, borderBottom: last ? "none" : "1px solid var(--s100)" };
-                const isTemp = doc.id.startsWith("temp-");
-                return (
-                  <tr key={doc.id}>
-                    <td style={cell}>
-                      <span
-                        onClick={() => !isTemp && openDocument(doc.id)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "6px",
-                          fontSize: "0.8125rem", fontWeight: 500, color: "var(--s800)",
-                          cursor: isTemp ? "default" : "pointer",
-                        }}
-                        onMouseEnter={(e) => { if (!isTemp) (e.currentTarget as HTMLElement).style.color = "var(--brand-600)"; }}
-                        onMouseLeave={(e) => { if (!isTemp) (e.currentTarget as HTMLElement).style.color = "var(--s800)"; }}
-                      >
-                        📄 {doc.name}
-                      </span>
-                      <div style={{ fontSize: "0.6875rem", color: "var(--s400)", marginTop: "2px" }}>{doc.uploadedAt}</div>
-                    </td>
-                    <td style={{ ...cell, textAlign: "center", fontSize: "0.8125rem", color: "var(--s600)" }}>{doc.pages ?? "—"}</td>
-                    <td style={{ ...cell, textAlign: "center", fontFamily: "var(--font-m)", fontSize: "0.75rem", color: "var(--s500)" }}>{doc.sections ?? "—"}</td>
-                    <td style={cell}><StatusBadge status={doc.status} progress={doc.progress} /></td>
-                    <td style={cell}>
-                      <button
-                        onClick={() => deleteDoc(doc.id)}
-                        title="Delete"
-                        style={{ color: "var(--s400)", cursor: "pointer", fontSize: "0.875rem", background: "none", border: "none", padding: "4px" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--red-500)")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--s400)")}
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div
+        role="tablist"
+        aria-label="Document collections"
+        style={{
+          marginTop: 28,
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={corpusActive}
+          onClick={() => setTab("corpus")}
+          style={tabStyle(corpusActive)}
+        >
+          Regulatory corpus
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!corpusActive}
+          onClick={() => setTab("company")}
+          style={tabStyle(!corpusActive)}
+        >
+          Company documents
+        </button>
       </div>
 
-      {/* ── Drop Zone ── */}
+      <input
+        ref={regFileRef}
+        type="file"
+        multiple
+        accept=".pdf,.docx"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          setTab("corpus");
+          addRegulatoryFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
       <input
         ref={fileRef}
         type="file"
         multiple
         accept=".pdf,.docx"
         style={{ display: "none" }}
-        onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
-      />
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => fileRef.current?.click()}
-        style={{
-          border: `2px dashed ${dragging ? "var(--brand-400)" : "var(--s200)"}`,
-          borderRadius: "10px", padding: "28px", textAlign: "center",
-          background: dragging ? "var(--brand-50)" : "#fff",
-          cursor: "pointer", transition: "all .15s",
+        onChange={(e) => {
+          setTab("company");
+          addFiles(e.target.files);
+          e.target.value = "";
         }}
-      >
-        <div style={{ fontSize: "1.25rem", marginBottom: "6px" }}>📤</div>
-        <div style={{ fontSize: "0.8125rem", color: "var(--s500)" }}>
-          Drag & drop PDF or DOCX here, or{" "}
-          <span style={{ color: "var(--brand-600)", fontWeight: 500 }}>browse files</span>
+      />
+
+      {corpusActive ? (
+        <div style={{ marginTop: 22 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-control)",
+                overflow: "hidden",
+                background: "var(--chip-bg)",
+              }}
+            >
+              <button
+                type="button"
+                aria-pressed={regJurisdiction === "in"}
+                onClick={() => setRegJurisdiction("in")}
+                style={segStyle(regJurisdiction === "in")}
+              >
+                India
+              </button>
+              <button
+                type="button"
+                aria-pressed={regJurisdiction === "eu"}
+                onClick={() => setRegJurisdiction("eu")}
+                style={{
+                  ...segStyle(regJurisdiction === "eu"),
+                  borderLeft: "1px solid var(--border)",
+                }}
+              >
+                EU
+              </button>
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--faint)" }}>
+              Shared across all tenants · read-only
+            </div>
+          </div>
+
+          {displayedRegDocs.length === 0 ? (
+            <EmptyState title="No regulatory documents yet">
+              The {regJurisdiction === "in" ? "India" : "EU"} corpus is empty. Upload a statute or
+              guidance PDF and it becomes citable across every tenant.
+            </EmptyState>
+          ) : (
+            <div style={TABLE_SHELL}>
+              <div style={HEADER_ROW}>
+                <span style={{ flex: 1 }}>Document</span>
+                <span style={{ width: 150 }}>Contents</span>
+                <span style={{ width: 100 }}>Status</span>
+              </div>
+
+              {displayedRegDocs.map((doc, i, all) => {
+                const isTemp = doc.id.startsWith("temp-");
+                const rowStyle = {
+                  ...DATA_ROW,
+                  borderBottom: i < all.length - 1 ? DATA_ROW.borderBottom : "none",
+                };
+
+                if (doc.error) {
+                  return (
+                    <div key={doc.id} style={{ ...rowStyle, flexWrap: "wrap" }}>
+                      <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
+                          {humanTitle(doc.name)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--high)",
+                            marginTop: 3,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {doc.error}
+                        </div>
+                      </div>
+                      <div style={{ width: 220, display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => retry(doc.id, "corpus")}
+                          className="palan-btn-secondary"
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "var(--ink)",
+                            background: "var(--surface)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--radius-item)",
+                            padding: "6px 12px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Retry
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFailed(doc.id, "corpus")}
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "var(--high)",
+                            background: "transparent",
+                            border: "none",
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={doc.id} className="palan-doc-row" style={rowStyle}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {isTemp ? (
+                        <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
+                          {humanTitle(doc.name)}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openDocument(doc.id)}
+                          className="palan-doc-title"
+                          style={{
+                            fontSize: 13.5,
+                            fontWeight: 500,
+                            color: "var(--ink)",
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            cursor: "pointer",
+                            textAlign: "left",
+                            fontFamily: "var(--font-sans)",
+                          }}
+                        >
+                          {humanTitle(doc.name)}
+                        </button>
+                      )}
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 11,
+                          color: "var(--faint)",
+                          marginTop: 3,
+                        }}
+                      >
+                        {doc.name}
+                      </div>
+                    </div>
+                    <div style={{ width: 150, fontSize: 12.5, color: "var(--muted)" }}>
+                      {doc.uploading ? "Uploading…" : contentsLabel(doc.pages, doc.sections)}
+                    </div>
+                    <div style={{ width: 100 }}>
+                      <StatusCell status={doc.status} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <div style={{ fontSize: "0.6875rem", color: "var(--s400)", marginTop: "4px" }}>
-          Max 10 MB per file · Supported: .pdf, .docx
+      ) : (
+        <div style={{ marginTop: 22 }}>
+          {docs.length === 0 ? (
+            <EmptyState
+              title="No documents yet"
+              action={
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="palan-btn palan-btn-primary"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "var(--on-accent)",
+                    background: "var(--accent)",
+                    border: "1px solid var(--accent)",
+                    borderRadius: "var(--radius-control)",
+                    padding: "10px 18px",
+                    minHeight: 36,
+                    cursor: "pointer",
+                  }}
+                >
+                  Browse files
+                </button>
+              }
+            >
+              Drag &amp; drop your privacy policy, employment contracts, or notices here. They stay
+              private to your company · PDF or DOCX · max {MAX_MB} MB.
+            </EmptyState>
+          ) : (
+            <>
+              <div style={TABLE_SHELL}>
+                <div style={HEADER_ROW}>
+                  <span style={{ flex: 1 }}>Document</span>
+                  <span style={{ width: 150 }}>Contents</span>
+                  <span style={{ width: 100 }}>Status</span>
+                  <span style={{ width: 70 }} />
+                </div>
+
+                {docs.map((doc, i, all) => {
+                  const isTemp = doc.id.startsWith("temp-");
+                  const rowStyle = {
+                    ...DATA_ROW,
+                    borderBottom: i < all.length - 1 ? DATA_ROW.borderBottom : "none",
+                  };
+
+                  if (doc.error) {
+                    return (
+                      <div key={doc.id} style={{ ...rowStyle, flexWrap: "wrap" }}>
+                        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
+                            {humanTitle(doc.name)}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "var(--high)",
+                              marginTop: 3,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {doc.error}
+                          </div>
+                        </div>
+                        <div style={{ width: 220, display: "flex", gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => retry(doc.id, "company")}
+                            className="palan-btn-secondary"
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 500,
+                              color: "var(--ink)",
+                              background: "var(--surface)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-item)",
+                              padding: "6px 12px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Retry
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFailed(doc.id, "company")}
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 500,
+                              color: "var(--high)",
+                              background: "transparent",
+                              border: "none",
+                              padding: "6px 8px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={doc.id} className="palan-doc-row" style={rowStyle}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {isTemp ? (
+                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
+                            {humanTitle(doc.name)}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openDocument(doc.id)}
+                            className="palan-doc-title"
+                            style={{
+                              fontSize: 13.5,
+                              fontWeight: 500,
+                              color: "var(--ink)",
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              cursor: "pointer",
+                              textAlign: "left",
+                              fontFamily: "var(--font-sans)",
+                            }}
+                          >
+                            {humanTitle(doc.name)}
+                          </button>
+                        )}
+                        <div
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            color: "var(--faint)",
+                            marginTop: 3,
+                          }}
+                        >
+                          {doc.name} · {doc.uploadedAt}
+                        </div>
+                      </div>
+                      <div style={{ width: 150, fontSize: 12.5, color: "var(--muted)" }}>
+                        {doc.uploading ? "Uploading…" : contentsLabel(doc.pages, doc.sections)}
+                      </div>
+                      <div style={{ width: 100 }}>
+                        <StatusCell status={doc.status} />
+                      </div>
+                      <div style={{ width: 70 }}>
+                        <button
+                          type="button"
+                          onClick={() => deleteDoc(doc.id)}
+                          className="palan-delete-btn"
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "var(--muted)",
+                            background: "transparent",
+                            border: "none",
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                style={{
+                  marginTop: 16,
+                  border: `1px dashed ${dragging ? "var(--accent)" : "var(--faint)"}`,
+                  background: dragging ? "var(--accent-tint)" : "transparent",
+                  borderRadius: "var(--radius-card)",
+                  padding: "18px 24px",
+                  textAlign: "center",
+                  transition: "border-color .15s, background .15s",
+                }}
+              >
+                <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
+                  Drag &amp; drop more files here or{" "}
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      font: "inherit",
+                      color: "var(--accent-ink)",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    browse
+                  </button>{" "}
+                  · PDF or DOCX · max {MAX_MB} MB · private to your company
+                </span>
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

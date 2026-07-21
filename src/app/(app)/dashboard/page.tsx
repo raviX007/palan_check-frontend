@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApiFetch } from "@/lib/api-client";
+import { Badge, type Level } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { CitationChip } from "@/components/ui/CitationChip";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { VerdictBand } from "@/components/ui/VerdictBand";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { scoreTone } from "@/components/ui/ScoreBar";
+import { severityLevel, scopeFor } from "@/lib/reports";
 
 interface User {
   id: string;
@@ -27,63 +35,45 @@ interface DomainScore {
   score: number;
   band: "green" | "amber" | "red";
   gap_count: number;
+  findings?: { severity: string; title: string; description: string; source_id?: string }[];
 }
 
-interface StoredScores {
-  scores: Record<string, DomainScore>;
-  updatedAt: string;
+const SCORE_HELP =
+  "Share of checks passed against every statute section in scope, weighted by severity: high ×3, medium ×2, low ×1. Recalculated whenever your documents or answers change.";
+
+const SEVERITY_RANK: Record<Level, number> = { high: 0, med: 1, low: 2, ok: 3 };
+
+interface NextAction {
+  level: Level;
+  title: string;
+  desc: string;
+  citation?: string;
 }
 
-const BAND_STYLE: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  green: { color: "#16a34a", bg: "#f0fdf4", border: "rgba(34,197,94,.2)",   label: "Compliant"    },
-  amber: { color: "#d97706", bg: "#fffbeb", border: "rgba(245,158,11,.2)",  label: "Needs Review" },
-  red:   { color: "#dc2626", bg: "#fef2f2", border: "rgba(239,68,68,.2)",   label: "At Risk"      },
+/** Next actions come from the engine's own findings for this tenant. */
+function deriveNextActions(scores: Record<string, DomainScore> | null): NextAction[] {
+  if (!scores) return [];
+  return Object.entries(scores)
+    .filter(([key]) => key !== "overall")
+    .flatMap(([, d]) => d.findings ?? [])
+    .map((f) => ({
+      level: severityLevel(f.severity),
+      title: f.title,
+      desc: f.description,
+      citation: f.source_id,
+    }))
+    .sort((a, b) => SEVERITY_RANK[a.level] - SEVERITY_RANK[b.level])
+    .slice(0, 3);
+}
+
+const row: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 16,
+  padding: "10px 0",
+  borderBottom: "1px solid var(--border-soft)",
+  fontSize: 13,
 };
-
-const DOMAIN_LABELS: Record<string, string> = {
-  dpdp:    "DPDP Act",
-  labour:  "Labour Law",
-  gdpr:    "GDPR",
-  overall: "Overall Score",
-};
-
-const SCORE_ORDER = ["dpdp", "labour", "gdpr", "overall"];
-
-const RECENT_QUERIES = [
-  { q: "Does NovaPay need a DPO?", time: "2 hours ago", status: "Answered" },
-  { q: "Contract worker obligations under DPDP", time: "Yesterday", status: "Answered" },
-  { q: "Privacy policy gaps for mobile app users", time: "2 days ago", status: "Answered" },
-  { q: "Data localisation requirements", time: "3 days ago", status: "Answered" },
-];
-
-const ALERTS = [
-  {
-    severity: "high",
-    title: "DPO Appointment Required",
-    desc: "Under DPDP Act §13, your data volume likely triggers mandatory DPO appointment within 90 days.",
-  },
-  {
-    severity: "high",
-    title: "Privacy Notice Non-Compliant",
-    desc: "Current mobile app privacy notice missing mandatory disclosures under DPDP §6(1).",
-  },
-  {
-    severity: "medium",
-    title: "Grievance Redressal Gap",
-    desc: "No formal grievance mechanism for data principals as required by DPDP §13(6).",
-  },
-];
-
-function ScoreBar({ score, color }: { score: number; color: string }) {
-  return (
-    <div style={{
-      height: "5px", background: "var(--s200)", borderRadius: "100px",
-      marginTop: "10px", overflow: "hidden",
-    }}>
-      <div style={{ width: `${score}%`, height: "100%", background: color, borderRadius: "100px", transition: "width .6s" }} />
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const apiFetch = useApiFetch();
@@ -96,11 +86,14 @@ export default function DashboardPage() {
     apiFetch<User>("/users/me")
       .then((u) => {
         setUser(u);
-        // Load persisted scores for this tenant from localStorage
+        // Persisted scores for this tenant.
         try {
           const raw = localStorage.getItem(`palan_scores_${u.tenant_id}`);
           if (raw) {
-            const parsed = JSON.parse(raw) as { scores: Record<string, DomainScore>; updatedAt: string };
+            const parsed = JSON.parse(raw) as {
+              scores: Record<string, DomainScore>;
+              updatedAt: string;
+            };
             setScores(parsed.scores);
             setScoresUpdatedAt(parsed.updatedAt);
           }
@@ -111,200 +104,277 @@ export default function DashboardPage() {
       .catch(() => null);
   }, [apiFetch]);
 
+  const isEU = tenant?.jurisdiction === "EU";
+  const scope = scopeFor(tenant?.jurisdiction);
+  const nextActions = deriveNextActions(scores);
+
+  const overall = scores?.overall;
+  const highCount = scores
+    ? Object.values(scores).reduce((n, d) => n + (d.band === "red" ? d.gap_count : 0), 0)
+    : 0;
+
+  const meta = [
+    tenant?.industry,
+    tenant?.employee_count ? `${tenant.employee_count} employees` : null,
+    tenant?.city,
+    user?.full_name ? `Signed in as ${user.full_name}` : null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div style={{ maxWidth: "1100px" }}>
-      {/* Company header */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        marginBottom: "24px",
-      }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", paddingTop: 16 }}>
+      {/* Masthead — kicker, company, meta, and the single primary CTA. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 24,
+          flexWrap: "wrap",
+        }}
+      >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--s900)" }}>
-              {tenant?.jurisdiction === "EU" ? "🇪🇺" : "🇮🇳"} {tenant?.name ?? "Loading…"}
-            </span>
-            {tenant && (
-              <span style={{
-                fontSize: "0.625rem", fontWeight: 500, padding: "2px 8px",
-                borderRadius: "100px", background: "rgba(249,115,22,.08)",
-                color: "#c2410c", border: "1px solid rgba(249,115,22,.15)",
-              }}>
-                {tenant.jurisdiction === "EU" ? "GDPR + AI Act" : "DPDP + Labour"}
-              </span>
-            )}
+          <div style={{ marginBottom: 10 }}>
+            <SectionLabel accent>Compliance workspace</SectionLabel>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "var(--s500)", marginTop: "3px" }}>
-            {[tenant?.city, tenant?.employee_count ? `${tenant.employee_count} employees` : null, tenant?.industry]
-              .filter(Boolean).join(" · ")}
-            {user?.full_name && <span> · Signed in as {user.full_name}</span>}
-          </p>
+          <h1
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontWeight: 600,
+              fontSize: 24,
+              letterSpacing: "-0.02em",
+              margin: "0 0 10px 0",
+              lineHeight: 1.15,
+              color: "var(--ink)",
+            }}
+          >
+            {tenant?.name ?? "Loading…"}
+          </h1>
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--muted)",
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            {meta.map((m, i) => (
+              <span key={m} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {i > 0 && <span style={{ color: "var(--faint)" }}>·</span>}
+                <span>{m}</span>
+              </span>
+            ))}
+          </div>
         </div>
-        <Link href="/chat" style={{
-          display: "inline-flex", alignItems: "center", gap: "6px",
-          background: "var(--brand-600)", color: "#fff", padding: "9px 18px",
-          borderRadius: "8px", fontSize: "0.8125rem", fontWeight: 600,
-          textDecoration: "none",
-        }}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          Ask Compliance Question
+
+        <Link
+          href="/chat"
+          className="palan-btn palan-btn-primary"
+          style={{
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: 36,
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--on-accent)",
+            background: "var(--accent)",
+            border: "1px solid var(--accent)",
+            borderRadius: "var(--radius-control)",
+            padding: "10px 18px",
+            textDecoration: "none",
+          }}
+        >
+          Ask a compliance question
         </Link>
       </div>
 
-      {/* Score cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        {scores
-          ? SCORE_ORDER.filter((d) => scores[d]).map((domain) => {
-              const s = scores[domain];
-              const style = BAND_STYLE[s.band];
-              return (
-                <div key={domain} style={{
-                  background: style.bg, border: `1px solid ${style.border}`,
-                  borderRadius: "10px", padding: "18px 20px",
-                }}>
-                  <p style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--s500)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    {DOMAIN_LABELS[domain] ?? domain}
-                  </p>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "8px" }}>
-                    <span style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--s900)", lineHeight: 1 }}>{s.score}</span>
-                    <span style={{ fontSize: "0.8125rem", color: "var(--s400)" }}>/100</span>
+      {/* Verdict band — honest overall readiness, or an empty state. */}
+      <div style={{ marginTop: 34 }}>
+        {overall ? (
+          <VerdictBand
+            score={`${overall.score}%`}
+            percent={overall.score}
+            tone={scoreTone(overall.score)}
+            help={SCORE_HELP}
+            note={
+              highCount > 0 ? (
+                <>
+                  Needs attention:{" "}
+                  <span style={{ color: "var(--high)", fontWeight: 500 }}>
+                    {highCount} high-priority
+                  </span>{" "}
+                  {highCount === 1 ? "gap" : "gaps"} open.
+                </>
+              ) : (
+                "No high-priority gaps open."
+              )
+            }
+            footer={
+              scoresUpdatedAt
+                ? `Last assessed ${new Date(scoresUpdatedAt).toLocaleString()}`
+                : undefined
+            }
+          >
+            <div style={{ marginBottom: 6 }}>
+              <SectionLabel>Next actions</SectionLabel>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {nextActions.length === 0 && (
+                <div style={{ fontSize: 13, color: "var(--muted)", padding: "13px 0" }}>
+                  No specific gaps recorded in the latest assessment.
+                </div>
+              )}
+              {nextActions.map((a, i) => (
+                <div
+                  key={`${a.title}-${i}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "13px 0",
+                    borderBottom:
+                      i < nextActions.length - 1 ? "1px solid var(--border-soft)" : "none",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Badge level={a.level} style={{ flexShrink: 0 }} />
+                  <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+                      {a.title}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
+                      {a.desc}
+                    </div>
                   </div>
-                  <ScoreBar score={s.score} color={style.color} />
-                  <p style={{ fontSize: "0.6875rem", fontWeight: 500, marginTop: "8px", color: style.color }}>
-                    {style.label} · {s.gap_count} gap{s.gap_count !== 1 ? "s" : ""}
-                  </p>
+                  {a.citation && (
+                    <CitationChip href={`/compare?citation=${encodeURIComponent(a.citation)}`}>
+                      {a.citation}
+                    </CitationChip>
+                  )}
+                  <Link
+                    href="/chat"
+                    className="palan-ask-link"
+                    style={{
+                      flexShrink: 0,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      padding: "8px 10px",
+                      margin: "-8px -10px",
+                      borderRadius: "var(--radius-item)",
+                    }}
+                  >
+                    Ask →
+                  </Link>
                 </div>
-              );
-            })
-          : SCORE_ORDER.map((domain) => (
-              <div key={domain} style={{
-                background: "#fff", border: "1px solid var(--s200)",
-                borderRadius: "10px", padding: "18px 20px",
-              }}>
-                <p style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--s500)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {DOMAIN_LABELS[domain] ?? domain}
-                </p>
-                <div style={{ display: "flex", alignItems: "baseline", gap: "6px", marginTop: "8px" }}>
-                  <span style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--s300)", lineHeight: 1 }}>—</span>
-                </div>
-                <ScoreBar score={0} color="var(--s200)" />
-                <p style={{ fontSize: "0.6875rem", color: "var(--s400)", marginTop: "8px" }}>
-                  No data yet
-                </p>
-              </div>
-            ))
-        }
+              ))}
+            </div>
+          </VerdictBand>
+        ) : (
+          <EmptyState
+            title="No assessment yet"
+            action={
+              <Link
+                href="/chat"
+                className="palan-btn palan-btn-primary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  minHeight: 36,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--on-accent)",
+                  background: "var(--accent)",
+                  border: "1px solid var(--accent)",
+                  borderRadius: "var(--radius-control)",
+                  padding: "10px 18px",
+                  textDecoration: "none",
+                }}
+              >
+                Ask a compliance question
+              </Link>
+            }
+          >
+            Ask a compliance question or upload your policies, and {tenant?.name ?? "your company"}
+            &rsquo;s readiness against {scope} will be scored here.
+          </EmptyState>
+        )}
       </div>
-      {scoresUpdatedAt && (
-        <p style={{ fontSize: "0.6875rem", color: "var(--s400)", marginTop: "-16px", marginBottom: "24px" }}>
-          Last assessed: {new Date(scoresUpdatedAt).toLocaleString()}
-        </p>
-      )}
 
-      {/* 2-column grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-        {/* Company profile */}
-        <div style={{ background: "#fff", border: "1px solid var(--s200)", borderRadius: "10px", padding: "20px 24px" }}>
-          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--s800)", marginBottom: "16px" }}>Company Profile</h2>
+      <div
+        style={{
+          marginTop: 20,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: 20,
+        }}
+      >
+        <Card style={{ padding: "20px 24px" }}>
+          <h2
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontWeight: 600,
+              fontSize: 15,
+              letterSpacing: "-0.01em",
+              margin: "0 0 14px 0",
+              color: "var(--ink)",
+            }}
+          >
+            Company profile
+          </h2>
           {[
             { label: "Industry", value: tenant?.industry ?? "—" },
-            { label: "Size", value: tenant?.employee_count ? `${tenant.employee_count} employees` : "—" },
-            { label: "Jurisdiction", value: tenant?.jurisdiction === "EU" ? "🇪🇺 European Union" : "🇮🇳 India" },
+            {
+              label: "Size",
+              value: tenant?.employee_count ? `${tenant.employee_count} employees` : "—",
+            },
+            { label: "Jurisdiction", value: isEU ? "European Union" : "India" },
             { label: "City", value: tenant?.city ?? "—" },
-            { label: "Regulatory Scope", value: tenant?.jurisdiction === "EU" ? "GDPR + AI Act" : "DPDP + Labour Codes" },
-          ].map((row) => (
-            <div key={row.label} style={{
-              display: "flex", justifyContent: "space-between",
-              padding: "8px 0", borderBottom: "1px solid var(--s100)",
-              fontSize: "0.8125rem",
-            }}>
-              <span style={{ color: "var(--s500)" }}>{row.label}</span>
-              <span style={{ color: "var(--s800)", fontWeight: 500 }}>{row.value}</span>
+            { label: "Regulatory scope", value: scope },
+          ].map((r, i, all) => (
+            <div
+              key={r.label}
+              style={{ ...row, borderBottom: i < all.length - 1 ? row.borderBottom : "none" }}
+            >
+              <span style={{ color: "var(--muted)" }}>{r.label}</span>
+              <span style={{ fontWeight: 500, color: "var(--ink)" }}>{r.value}</span>
             </div>
           ))}
-        </div>
+        </Card>
 
-        {/* Recent queries */}
-        <div style={{ background: "#fff", border: "1px solid var(--s200)", borderRadius: "10px", padding: "20px 24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--s800)" }}>Recent Queries</h2>
-            <Link href="/chat" style={{ fontSize: "0.75rem", color: "var(--brand-600)", fontWeight: 500 }}>View all</Link>
+        <Card style={{ padding: "20px 24px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontWeight: 600,
+                fontSize: 15,
+                letterSpacing: "-0.01em",
+                margin: 0,
+                color: "var(--ink)",
+              }}
+            >
+              Recent chats
+            </h2>
+            <Link href="/chat" style={{ fontSize: 12.5, fontWeight: 500 }}>
+              View all
+            </Link>
           </div>
-          {RECENT_QUERIES.map((item, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-              padding: "10px 0", borderBottom: i < RECENT_QUERIES.length - 1 ? "1px solid var(--s100)" : "none",
-              gap: "8px",
-            }}>
-              <div style={{ minWidth: 0 }}>
-                <p style={{
-                  fontSize: "0.8125rem", color: "var(--s800)", fontWeight: 500,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {item.q}
-                </p>
-                <p style={{ fontSize: "0.6875rem", color: "var(--s400)", marginTop: "2px" }}>{item.time}</p>
-              </div>
-              <span style={{
-                fontSize: "0.625rem", fontWeight: 500, padding: "2px 8px",
-                borderRadius: "100px", background: "var(--green-50)",
-                color: "var(--green-700)", border: "1px solid rgba(34,197,94,.2)",
-                flexShrink: 0,
-              }}>
-                {item.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* High priority alerts */}
-      <div style={{ background: "#fff", border: "1px solid var(--s200)", borderRadius: "10px", padding: "20px 24px" }}>
-        <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--s800)", marginBottom: "16px" }}>
-          High Priority Alerts
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {ALERTS.map((alert, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "flex-start", gap: "12px",
-              padding: "12px 16px", borderRadius: "8px",
-              ...(alert.severity === "high"
-                ? { background: "var(--red-50)", border: "1px solid rgba(239,68,68,.2)" }
-                : { background: "var(--amber-50)", border: "1px solid rgba(245,158,11,.2)" }),
-            }}>
-              <div style={{
-                width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: alert.severity === "high" ? "var(--red-500)" : "var(--amber-500)",
-                marginTop: "1px",
-              }}>
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" strokeWidth="2.5">
-                  <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                </svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: "0.8125rem", fontWeight: 600,
-                  color: alert.severity === "high" ? "var(--red-700)" : "var(--amber-700)",
-                  marginBottom: "3px",
-                }}>
-                  {alert.title}
-                </p>
-                <p style={{ fontSize: "0.75rem", color: "var(--s600)", lineHeight: 1.5 }}>
-                  {alert.desc}
-                </p>
-              </div>
-              <Link href="/chat" style={{
-                fontSize: "0.6875rem", fontWeight: 500, flexShrink: 0,
-                color: "var(--brand-600)", padding: "4px 10px",
-                border: "1px solid var(--brand-200)", borderRadius: "6px",
-              }}>
-                Ask
-              </Link>
-            </div>
-          ))}
-        </div>
+          {/* No chat-history endpoint yet — say so rather than show samples. */}
+          <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55, padding: "4px 0" }}>
+            Past conversations aren&rsquo;t saved yet. Ask a compliance question and the answer,
+            citations and score will appear here.
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -1,8 +1,21 @@
+import { QuickCheck } from "@/components/marketing/QuickCheck";
+import { SectionHeading, SHELL } from "@/components/marketing/shared";
+
+export const metadata = {
+  title: "Quick compliance check — Palan Check",
+  description:
+    "Pick a sample question and get the general rule, with the exact sections it comes from.",
+};
+
 export default function QuickCheckPage() {
   return (
-    <main style={{ maxWidth: "640px", margin: "4rem auto", padding: "0 1.5rem" }}>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.5rem" }}>Quick Compliance Check</h1>
-      <p style={{ color: "#64748b" }}>Answer 5 questions to get an instant compliance snapshot. Coming soon.</p>
-    </main>
+    <section style={{ ...SHELL, paddingTop: 64, paddingBottom: 96 }}>
+      <SectionHeading
+        kicker="Quick check"
+        title="Check your compliance in 30 seconds"
+        lead="Pick a sample question below. No sign-up required, no LLM cost. Just a quick read on where you stand."
+      />
+      <QuickCheck />
+    </section>
   );
 }

@@ -8,10 +8,10 @@ function NoOrgFallback() {
 
   return (
     <div style={{ padding: "8px 12px" }}>
-      <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#fff" }}>
+      <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--ink)" }}>
         {name}
       </div>
-      <div style={{ fontSize: "0.6875rem", color: "var(--s500)", marginTop: "2px" }}>
+      <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "2px" }}>
         No organization — contact admin
       </div>
     </div>
@@ -34,17 +34,17 @@ export function CompanySwitcher() {
           rootBox: { width: "100%" },
           organizationSwitcherTrigger: {
             padding: "8px 12px",
-            borderRadius: "6px",
+            borderRadius: "7px",
             width: "100%",
             justifyContent: "flex-start",
-            color: "#fff",
-            fontSize: "0.8125rem",
+            color: "var(--ink)",
+            fontSize: "13.5px",
             fontWeight: 500,
             background: "transparent",
           },
-          organizationSwitcherTriggerIcon: { color: "var(--s400)" },
-          organizationPreviewTextContainer: { color: "#fff" },
-          organizationPreviewSecondaryIdentifier: { color: "var(--s400)" },
+          organizationSwitcherTriggerIcon: { color: "var(--faint)" },
+          organizationPreviewTextContainer: { color: "var(--ink)" },
+          organizationPreviewSecondaryIdentifier: { color: "var(--muted)" },
         },
       }}
     />
