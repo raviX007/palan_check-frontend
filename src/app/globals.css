@@ -25,9 +25,9 @@
   --topbar: rgba(15,18,24,0.9); --chip-bg: #12151C;
   --mark-doc: #40351A; --mark-law: #262E58;
 }
-@keyframes palan-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
-@keyframes palan-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-@keyframes palan-bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+@keyframes rc-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.75); } }
+@keyframes rc-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes rc-bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
 
 /* Tailwind reads the design tokens — semantic utilities, no parallel palette. */
 @theme inline {
@@ -62,53 +62,53 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 button{font-family:inherit;color:inherit}
 
 /* ── UI PRIMITIVE HOVERS (see components/ui/) ── */
-.palan-btn-primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover)}
-.palan-btn-secondary:hover:not(:disabled){border-color:var(--faint)}
-.palan-btn-ghost:hover:not(:disabled){color:var(--ink);background:var(--row)}
-.palan-cite:hover{border-color:var(--accent);color:var(--accent-ink)}
-.palan-ask-link:hover{background:var(--accent-tint)}
-.palan-help-dot:hover{color:var(--accent-ink);border-color:var(--accent)}
-.palan-suggest-chip:hover{background:var(--accent-tint);border-color:var(--accent-tint);color:var(--accent-ink)}
-.palan-stop-btn:hover{color:var(--ink);border-color:var(--faint)}
-.palan-trace-toggle:hover{background:var(--row)}
-.palan-score-card:hover{border-color:var(--accent)}
-.palan-doc-row:hover{background:var(--row)}
-.palan-doc-title:hover{color:var(--accent-ink)}
-.palan-delete-btn:hover{color:var(--high)}
-.palan-selector:hover{border-color:var(--faint)}
-.palan-step-btn:hover:not(:disabled){border-color:var(--faint);color:var(--ink)}
+.rc-btn-primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover)}
+.rc-btn-secondary:hover:not(:disabled){border-color:var(--faint)}
+.rc-btn-ghost:hover:not(:disabled){color:var(--ink);background:var(--row)}
+.rc-cite:hover{border-color:var(--accent);color:var(--accent-ink)}
+.rc-ask-link:hover{background:var(--accent-tint)}
+.rc-help-dot:hover{color:var(--accent-ink);border-color:var(--accent)}
+.rc-suggest-chip:hover{background:var(--accent-tint);border-color:var(--accent-tint);color:var(--accent-ink)}
+.rc-stop-btn:hover{color:var(--ink);border-color:var(--faint)}
+.rc-trace-toggle:hover{background:var(--row)}
+.rc-score-card:hover{border-color:var(--accent)}
+.rc-doc-row:hover{background:var(--row)}
+.rc-doc-title:hover{color:var(--accent-ink)}
+.rc-delete-btn:hover{color:var(--high)}
+.rc-selector:hover{border-color:var(--faint)}
+.rc-step-btn:hover:not(:disabled){border-color:var(--faint);color:var(--ink)}
 
 /* ── APP SHELL ── 246px sidebar; collapses to a pill nav below 920px ── */
-.palan-shell{display:flex;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font-sans)}
-.palan-sidebar{
+.rc-shell{display:flex;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font-sans)}
+.rc-sidebar{
   width:246px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);
   padding:26px 0 18px;position:fixed;height:100vh;display:flex;flex-direction:column;
   overflow-y:auto;z-index:40;
 }
-.palan-main{margin-left:246px;flex:1;display:flex;flex-direction:column;min-width:0}
-.palan-pillnav{display:none}
-.palan-navlink:hover{background:var(--row);color:var(--ink)}
-.palan-search-chip:hover{color:var(--ink);border-color:var(--faint)}
+.rc-main{margin-left:246px;flex:1;display:flex;flex-direction:column;min-width:0}
+.rc-pillnav{display:none}
+.rc-navlink:hover{background:var(--row);color:var(--ink)}
+.rc-search-chip:hover{color:var(--ink);border-color:var(--faint)}
 
 @media (max-width:920px){
-  .palan-sidebar{display:none}
-  .palan-main{margin-left:0}
-  .palan-pillnav{
+  .rc-sidebar{display:none}
+  .rc-main{margin-left:0}
+  .rc-pillnav{
     display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
     padding:10px clamp(16px,4vw,40px);
     background:var(--side);border-bottom:1px solid var(--border);
   }
-  .palan-pillnav::-webkit-scrollbar{display:none}
-  .palan-jurisdiction-pill{display:none}
+  .rc-pillnav::-webkit-scrollbar{display:none}
+  .rc-jurisdiction-pill{display:none}
 }
 
 /* ThemeToggle glyph is CSS-driven so SSR and client markup match exactly */
-.palan-icon-dark{display:none}
-[data-theme="dark"] .palan-icon-light{display:none}
-[data-theme="dark"] .palan-icon-dark{display:inline}
+.rc-icon-dark{display:none}
+[data-theme="dark"] .rc-icon-light{display:none}
+[data-theme="dark"] .rc-icon-dark{display:inline}
 
 /* ── MARKETING ── */
-.palan-anchor:hover{color:var(--ink)}
-.palan-demo-co:hover{border-color:var(--faint)}
-.palan-demo-account:hover{background:var(--row);border-color:var(--border)}
-@media (max-width:820px){ .palan-marketing-nav{display:none} }
+.rc-anchor:hover{color:var(--ink)}
+.rc-demo-co:hover{border-color:var(--faint)}
+.rc-demo-account:hover{background:var(--row);border-color:var(--border)}
+@media (max-width:820px){ .rc-marketing-nav{display:none} }

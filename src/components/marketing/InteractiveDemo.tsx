@@ -151,7 +151,7 @@ export function InteractiveDemo() {
                 type="button"
                 onClick={() => setSelected(i)}
                 aria-pressed={active}
-                className="palan-demo-co"
+                className="rc-demo-co"
                 style={{
                   textAlign: "left",
                   border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,

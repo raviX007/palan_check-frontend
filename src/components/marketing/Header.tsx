@@ -88,20 +88,20 @@ export function Header() {
               color: "var(--ink)",
             }}
           >
-            Palan Check
+            RegulationCheck
           </span>
         </Link>
 
         <nav
           aria-label="Page sections"
-          className="palan-marketing-nav"
+          className="rc-marketing-nav"
           style={{ display: "flex", alignItems: "center", gap: 4 }}
         >
           {NAV.map((n) => (
             <a
               key={n.href}
               href={n.href}
-              className="palan-anchor"
+              className="rc-anchor"
               style={{
                 fontSize: 13,
                 fontWeight: 500,
@@ -118,15 +118,15 @@ export function Header() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <ThemeToggle />
           <Show when="signed-out">
-            <Link href="/quick-check" className="palan-btn palan-btn-secondary" style={SECONDARY}>
+            <Link href="/quick-check" className="rc-btn rc-btn-secondary" style={SECONDARY}>
               Quick check
             </Link>
-            <Link href="/sign-in" className="palan-btn palan-btn-primary" style={PRIMARY}>
+            <Link href="/sign-in" className="rc-btn rc-btn-primary" style={PRIMARY}>
               Sign in
             </Link>
           </Show>
           <Show when="signed-in">
-            <Link href="/dashboard" className="palan-btn palan-btn-primary" style={PRIMARY}>
+            <Link href="/dashboard" className="rc-btn rc-btn-primary" style={PRIMARY}>
               Dashboard
             </Link>
           </Show>

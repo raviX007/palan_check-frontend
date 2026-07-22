@@ -30,8 +30,8 @@ export function ThemeToggle() {
         justifyContent: "center",
       }}
     >
-      <span className="palan-icon-light" aria-hidden="true">◐</span>
-      <span className="palan-icon-dark" aria-hidden="true">☀</span>
+      <span className="rc-icon-light" aria-hidden="true">◐</span>
+      <span className="rc-icon-dark" aria-hidden="true">☀</span>
     </button>
   );
 }

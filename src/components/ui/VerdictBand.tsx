@@ -82,7 +82,7 @@ export function VerdictBand({
               onClick={() => setHelpOpen((o) => !o)}
               aria-label="How is this scored?"
               aria-expanded={helpOpen}
-              className="palan-help-dot"
+              className="rc-help-dot"
               style={{
                 width: 18,
                 height: 18,

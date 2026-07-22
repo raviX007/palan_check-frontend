@@ -52,7 +52,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               color: "var(--ink)",
             }}
           >
-            Palan Check
+            RegulationCheck
           </span>
         </Link>
         <ThemeToggle />

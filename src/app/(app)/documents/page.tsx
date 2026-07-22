@@ -457,7 +457,7 @@ export default function DocumentsPage() {
         <button
           type="button"
           onClick={() => (corpusActive ? regFileRef.current : fileRef.current)?.click()}
-          className="palan-btn palan-btn-primary"
+          className="rc-btn rc-btn-primary"
           style={{
             flexShrink: 0,
             fontFamily: "var(--font-sans)",
@@ -611,7 +611,7 @@ export default function DocumentsPage() {
                         <button
                           type="button"
                           onClick={() => retry(doc.id, "corpus")}
-                          className="palan-btn-secondary"
+                          className="rc-btn-secondary"
                           style={{
                             fontSize: 12,
                             fontWeight: 500,
@@ -646,7 +646,7 @@ export default function DocumentsPage() {
                 }
 
                 return (
-                  <div key={doc.id} className="palan-doc-row" style={rowStyle}>
+                  <div key={doc.id} className="rc-doc-row" style={rowStyle}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {isTemp ? (
                         <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
@@ -656,7 +656,7 @@ export default function DocumentsPage() {
                         <button
                           type="button"
                           onClick={() => openDocument(doc.id)}
-                          className="palan-doc-title"
+                          className="rc-doc-title"
                           style={{
                             fontSize: 13.5,
                             fontWeight: 500,
@@ -704,7 +704,7 @@ export default function DocumentsPage() {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="palan-btn palan-btn-primary"
+                  className="rc-btn rc-btn-primary"
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
@@ -763,7 +763,7 @@ export default function DocumentsPage() {
                           <button
                             type="button"
                             onClick={() => retry(doc.id, "company")}
-                            className="palan-btn-secondary"
+                            className="rc-btn-secondary"
                             style={{
                               fontSize: 12,
                               fontWeight: 500,
@@ -798,7 +798,7 @@ export default function DocumentsPage() {
                   }
 
                   return (
-                    <div key={doc.id} className="palan-doc-row" style={rowStyle}>
+                    <div key={doc.id} className="rc-doc-row" style={rowStyle}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isTemp ? (
                           <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
@@ -808,7 +808,7 @@ export default function DocumentsPage() {
                           <button
                             type="button"
                             onClick={() => openDocument(doc.id)}
-                            className="palan-doc-title"
+                            className="rc-doc-title"
                             style={{
                               fontSize: 13.5,
                               fontWeight: 500,
@@ -845,7 +845,7 @@ export default function DocumentsPage() {
                         <button
                           type="button"
                           onClick={() => deleteDoc(doc.id)}
-                          className="palan-delete-btn"
+                          className="rc-delete-btn"
                           style={{
                             fontSize: 12,
                             fontWeight: 500,

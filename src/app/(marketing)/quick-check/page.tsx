@@ -2,7 +2,7 @@ import { QuickCheck } from "@/components/marketing/QuickCheck";
 import { SectionHeading, SHELL } from "@/components/marketing/shared";
 
 export const metadata = {
-  title: "Quick compliance check — Palan Check",
+  title: "Quick compliance check — RegulationCheck",
   description:
     "Pick a sample question and get the general rule, with the exact sections it comes from.",
 };

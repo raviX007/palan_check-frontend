@@ -19,7 +19,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Palan Check — Agentic Compliance Engine",
+  title: "RegulationCheck — Agentic Compliance Engine",
   description:
     "Multi-agent reasoning across DPDP Act, Labour Codes, GDPR, and EU AI Act.",
 };
@@ -41,7 +41,7 @@ export default function RootLayout({
             attribute="data-theme"
             defaultTheme="light"
             enableSystem={false}
-            storageKey="palan-theme"
+            storageKey="rc-theme"
           >
             {children}
           </ThemeProvider>

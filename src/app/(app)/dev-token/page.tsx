@@ -79,7 +79,7 @@ export default function DevTokenPage() {
           navigator.clipboard.writeText(token).then(() => setCopied(true));
         }}
         disabled={!token}
-        className="palan-btn palan-btn-primary"
+        className="rc-btn rc-btn-primary"
         style={{
           marginTop: 10,
           fontFamily: "var(--font-sans)",

@@ -36,7 +36,7 @@ export function Footer() {
           >
             P
           </div>
-          <span>Palan Check · Agentic Compliance Engine. Built by Ravi Raj.</span>
+          <span>RegulationCheck · Agentic Compliance Engine. Built by Ravi Raj.</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
