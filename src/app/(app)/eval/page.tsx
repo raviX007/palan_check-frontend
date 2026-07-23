@@ -281,7 +281,7 @@ export default function EvalPage() {
             type="button"
             onClick={runSuite}
             disabled={isRunning}
-            className="palan-btn palan-btn-primary"
+            className="rc-btn rc-btn-primary"
             style={{
               fontFamily: "var(--font-sans)",
               fontSize: 13,

@@ -185,9 +185,9 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 aria-label="Search pages and actions"
                 role="combobox"
                 aria-expanded
-                aria-controls="palan-cmd-list"
+                aria-controls="rc-cmd-list"
                 aria-activedescendant={
-                  results.length ? `palan-cmd-opt-${safeSel}` : undefined
+                  results.length ? `rc-cmd-opt-${safeSel}` : undefined
                 }
                 style={{
                   width: "100%",
@@ -204,7 +204,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
             <div
               ref={listRef}
-              id="palan-cmd-list"
+              id="rc-cmd-list"
               role="listbox"
               aria-label="Commands"
               style={{ padding: 6, maxHeight: 320, overflowY: "auto" }}
@@ -213,7 +213,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 <button
                   key={a.label}
                   type="button"
-                  id={`palan-cmd-opt-${i}`}
+                  id={`rc-cmd-opt-${i}`}
                   role="option"
                   onClick={() => run(a)}
                   onMouseMove={() => setSel(i)}
@@ -296,7 +296,7 @@ export function CommandPaletteChip() {
       onClick={open}
       aria-label="Open command menu"
       aria-haspopup="dialog"
-      className="palan-search-chip"
+      className="rc-search-chip"
       style={{
         display: "flex",
         alignItems: "center",

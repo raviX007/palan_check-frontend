@@ -70,7 +70,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <Link href="/chat" className="palan-btn palan-btn-primary" style={CTA}>
+        <Link href="/chat" className="rc-btn rc-btn-primary" style={CTA}>
           New report
         </Link>
       </div>
@@ -80,7 +80,7 @@ export default function ReportsPage() {
           <EmptyState
             title="No reports yet"
             action={
-              <Link href="/chat" className="palan-btn palan-btn-primary" style={CTA}>
+              <Link href="/chat" className="rc-btn rc-btn-primary" style={CTA}>
                 Ask a question
               </Link>
             }
@@ -122,7 +122,7 @@ export default function ReportsPage() {
 
             <Link
               href={`/reports/${report.id}`}
-              className="palan-doc-row"
+              className="rc-doc-row"
               style={{
                 display: "flex",
                 alignItems: "center",

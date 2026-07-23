@@ -88,7 +88,7 @@ export default function DashboardPage() {
         setUser(u);
         // Persisted scores for this tenant.
         try {
-          const raw = localStorage.getItem(`palan_scores_${u.tenant_id}`);
+          const raw = localStorage.getItem(`rc_scores_${u.tenant_id}`);
           if (raw) {
             const parsed = JSON.parse(raw) as {
               scores: Record<string, DomainScore>;
@@ -170,7 +170,7 @@ export default function DashboardPage() {
 
         <Link
           href="/chat"
-          className="palan-btn palan-btn-primary"
+          className="rc-btn rc-btn-primary"
           style={{
             flexShrink: 0,
             display: "inline-flex",
@@ -255,7 +255,7 @@ export default function DashboardPage() {
                   )}
                   <Link
                     href="/chat"
-                    className="palan-ask-link"
+                    className="rc-ask-link"
                     style={{
                       flexShrink: 0,
                       fontSize: 12.5,
@@ -277,7 +277,7 @@ export default function DashboardPage() {
             action={
               <Link
                 href="/chat"
-                className="palan-btn palan-btn-primary"
+                className="rc-btn rc-btn-primary"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

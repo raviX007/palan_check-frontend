@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
  * server-side, so an arbitrary email can never be targeted.
  *
  * NOTE: deliberately NOT under /api. In production, nginx routes /api/* to the
- * palan-api container (which runs with --root-path /api), so a Next route
+ * regulation-check-api container (which runs with --root-path /api), so a Next route
  * handler there is unreachable and returns FastAPI's 404.
  */
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     const users = (await lookup.json()) as { id: string }[];
     if (!users.length) {
       return NextResponse.json(
-        { error: "Demo user not seeded. Run palan-api/Scripts/seed_demo_users.py." },
+        { error: "Demo user not seeded. Run regulation-check-api/Scripts/seed_demo_users.py." },
         { status: 404 },
       );
     }

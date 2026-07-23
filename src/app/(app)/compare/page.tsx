@@ -81,7 +81,7 @@ function Selector({
         aria-label={label}
         onClick={() => setOpen((o) => !o)}
         disabled={options.length === 0}
-        className="palan-selector"
+        className="rc-selector"
         style={{
           display: "flex",
           alignItems: "center",
@@ -334,7 +334,7 @@ function CompareInner() {
             action={
               <Link
                 href="/chat"
-                className="palan-btn palan-btn-primary"
+                className="rc-btn rc-btn-primary"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -458,7 +458,7 @@ function CompareInner() {
               type="button"
               onClick={() => step(-1)}
               disabled={gapIndex === 0}
-              className="palan-step-btn"
+              className="rc-step-btn"
               style={{ ...STEP_BTN, opacity: gapIndex === 0 ? 0.4 : 1 }}
             >
               ← Previous
@@ -478,7 +478,7 @@ function CompareInner() {
               type="button"
               onClick={() => step(1)}
               disabled={gapIndex === gaps.length - 1}
-              className="palan-step-btn"
+              className="rc-step-btn"
               style={{ ...STEP_BTN, opacity: gapIndex === gaps.length - 1 ? 0.4 : 1 }}
             >
               Next →

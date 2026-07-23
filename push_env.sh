@@ -5,9 +5,9 @@
 #   ./push-secrets.sh resume-tailor/backend ../resume-tailor/backend/.env
 #   ./push_env.sh job-tracker/ui .env
 #   ./push_env.sh finwise/backend .env
-# ./push_env.sh palan-check/backend .env
-# ./push_env.sh palan-check/engine .env
-# ./push_env.sh palan-check/frontend .env
+# ./push_env.sh regulation-check/backend .env
+# ./push_env.sh regulation-check/engine .env
+# ./push_env.sh regulation-check/frontend .env
 #   ./push-secrets.sh job-tracker/pipeline ../job-tracker/pipeline/.env
 
 SECRET_NAME="$1"

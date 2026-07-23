@@ -41,7 +41,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 /**
  * Only ONE primary button per view — the accent is a budget, not a default.
- * Hover states live in globals.css (.palan-btn-*) so they work without JS.
+ * Hover states live in globals.css (.rc-btn-*) so they work without JS.
  */
 export function Button({
   variant = "primary",
@@ -55,7 +55,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled}
-      className={["palan-btn", `palan-btn-${variant}`, className]
+      className={["rc-btn", `rc-btn-${variant}`, className]
         .filter(Boolean)
         .join(" ")}
       style={{

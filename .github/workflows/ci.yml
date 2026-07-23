@@ -1,4 +1,4 @@
-name: palan-web CI
+name: regulation-check-web CI
 
 on:
   push:

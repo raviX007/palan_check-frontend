@@ -24,7 +24,7 @@ export function TopBar({ title }: { title?: string }) {
   const section = Object.keys(PATH_TITLES).find(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
-  const current = title ?? (section ? PATH_TITLES[section] : undefined) ?? "Palan Check";
+  const current = title ?? (section ? PATH_TITLES[section] : undefined) ?? "RegulationCheck";
 
   return (
     <div
@@ -47,7 +47,7 @@ export function TopBar({ title }: { title?: string }) {
     >
       {/* Breadcrumb: trail is muted, the current segment is ink 500. */}
       <nav aria-label="Breadcrumb" style={{ fontSize: 13, color: "var(--muted)", minWidth: 0 }}>
-        <span style={{ color: "var(--muted)" }}>Palan Check</span>
+        <span style={{ color: "var(--muted)" }}>RegulationCheck</span>
         <span aria-hidden="true" style={{ margin: "0 8px", color: "var(--faint)" }}>
           /
         </span>
@@ -60,7 +60,7 @@ export function TopBar({ title }: { title?: string }) {
         <CommandPaletteChip />
 
         <div
-          className="palan-jurisdiction-pill"
+          className="rc-jurisdiction-pill"
           style={{
             fontSize: 12,
             fontWeight: 500,

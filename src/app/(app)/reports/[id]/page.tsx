@@ -41,7 +41,7 @@ export default function ReportDetailPage() {
           action={
             <Link
               href="/reports"
-              className="palan-btn palan-btn-secondary"
+              className="rc-btn rc-btn-secondary"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

@@ -1,4 +1,4 @@
-name: Build & Deploy palan-web
+name: Build & Deploy regulation-check-web
 
 on:
   push:
@@ -10,10 +10,10 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: palan-web
-  DOCKER_NETWORK: palan-net
-  CONTAINER_NAME: palan-web
-  SECRET_ID: palan-check/frontend
+  ECR_REPOSITORY: regulation-check-web
+  DOCKER_NETWORK: regulation-check-net
+  CONTAINER_NAME: regulation-check-web
+  SECRET_ID: regulation-check/frontend
 
 jobs:
   build-and-deploy:
@@ -35,7 +35,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
-            palan-check/frontend
+            regulation-check/frontend
           parse-json-secrets: true
 
       # ── Login to ECR ──
@@ -48,9 +48,9 @@ jobs:
         run: |
           IMAGE="${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}"
           docker build \
-            --build-arg NEXT_PUBLIC_API_URL="${PALAN_CHECK_FRONTEND_NEXT_PUBLIC_API_URL}" \
-            --build-arg NEXT_PUBLIC_ENGINE_URL="${PALAN_CHECK_FRONTEND_NEXT_PUBLIC_ENGINE_URL}" \
-            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${PALAN_CHECK_FRONTEND_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
+            --build-arg NEXT_PUBLIC_API_URL="${REGULATION_CHECK_FRONTEND_NEXT_PUBLIC_API_URL}" \
+            --build-arg NEXT_PUBLIC_ENGINE_URL="${REGULATION_CHECK_FRONTEND_NEXT_PUBLIC_ENGINE_URL}" \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${REGULATION_CHECK_FRONTEND_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
             -t "$IMAGE:${{ github.sha }}" \
             -t "$IMAGE:latest" \
             .

@@ -6,14 +6,14 @@ import { NAV } from "./nav-items";
 
 /**
  * Horizontal pill nav shown below 920px, where the sidebar collapses away.
- * Visibility is CSS-driven (.palan-pillnav in globals.css) so there is no
+ * Visibility is CSS-driven (.rc-pillnav in globals.css) so there is no
  * matchMedia hydration flicker.
  */
 export function PillNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Primary" className="palan-pillnav">
+    <nav aria-label="Primary" className="rc-pillnav">
       {NAV.map(({ href, label, icon }) => {
         const active = pathname === href;
         return (

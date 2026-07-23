@@ -90,10 +90,10 @@ export function Hero() {
           </p>
 
           <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
-            <a href="#quick-check" className="palan-btn palan-btn-primary" style={CTA_PRIMARY}>
+            <a href="#quick-check" className="rc-btn rc-btn-primary" style={CTA_PRIMARY}>
               Check your compliance in 30 seconds
             </a>
-            <Link href="/sign-in" className="palan-btn palan-btn-secondary" style={CTA_SECONDARY}>
+            <Link href="/sign-in" className="rc-btn rc-btn-secondary" style={CTA_SECONDARY}>
               Sign in
             </Link>
           </div>
@@ -139,7 +139,7 @@ export function Hero() {
                   color: SHOT.dim,
                 }}
               >
-                palancheck.app/chat
+                regulationcheck.app/chat
               </span>
             </div>
 
@@ -165,7 +165,7 @@ export function Hero() {
                       height: 6,
                       borderRadius: "50%",
                       background: SHOT.accent,
-                      animation: "palan-pulse 1.2s ease-in-out infinite",
+                      animation: "rc-pulse 1.2s ease-in-out infinite",
                     }}
                   />
                   <span style={{ color: SHOT.bright }}>Drafting the answer…</span>

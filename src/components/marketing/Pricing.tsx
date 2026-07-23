@@ -167,7 +167,7 @@ export function Pricing() {
             {t.cta === "signup" ? (
               <Link
                 href="/sign-in"
-                className="palan-btn palan-btn-primary"
+                className="rc-btn rc-btn-primary"
                 style={{
                   display: "block",
                   textAlign: "center",

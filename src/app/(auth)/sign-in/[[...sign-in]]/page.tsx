@@ -63,7 +63,7 @@ export default function SignInPage() {
     setEmail(demoEmail);
 
     try {
-      // Not /api/* — nginx routes that namespace to palan-api in production.
+      // Not /api/* — nginx routes that namespace to regulation-check-api in production.
       const response = await fetch("/demo-signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -194,7 +194,7 @@ export default function SignInPage() {
             onClick={() => signInAsDemo(a.key, a.email)}
             disabled={busy !== null}
             aria-label={`Sign in as ${a.name}`}
-            className="palan-demo-account"
+            className="rc-demo-account"
             style={{
               opacity: busy !== null && busy !== a.key ? 0.5 : 1,
               display: "flex",

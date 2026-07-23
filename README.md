@@ -1,15 +1,15 @@
-# PalanCheck Web (`palan-web`)
+# RegulationCheck Web (`regulation-check-web`)
 
-Next.js 16 frontend for PalanCheck — an agentic compliance platform for Indian and EU regulatory frameworks (DPDP Act 2023, India Labour Codes, GDPR).
+Next.js 16 frontend for RegulationCheck — an agentic compliance platform for Indian and EU regulatory frameworks (DPDP Act 2023, India Labour Codes, GDPR).
 
-This service is the user-facing interface. It talks to `palan-api` for auth and data, and streams compliance chat responses directly from `palan-engine` via SSE.
+This service is the user-facing interface. It talks to `regulation-check-api` for auth and data, and streams compliance chat responses directly from `regulation-check-engine` via SSE.
 
 ```
-palan-web (this service — port 3000)
+regulation-check-web (this service — port 3000)
       ↓  REST + Clerk JWT
-palan-api (port 8000) — auth, documents, conversations, reports
+regulation-check-api (port 8000) — auth, documents, conversations, reports
       ↓  SSE stream
-palan-engine (port 8001) — AI compliance analysis
+regulation-check-engine (port 8001) — AI compliance analysis
 ```
 
 ---
@@ -32,7 +32,7 @@ palan-engine (port 8001) — AI compliance analysis
 ## Project structure
 
 ```
-palan-web/
+regulation-check-web/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx                        # Root layout — fonts, Clerk provider
@@ -90,9 +90,9 @@ palan-web/
 ## Prerequisites
 
 - Node.js 20+
-- A [Clerk](https://clerk.com) application (same app as `palan-api`)
-- `palan-api` running on port 8000
-- `palan-engine` running on port 8001 (for SSE chat stream)
+- A [Clerk](https://clerk.com) application (same app as `regulation-check-api`)
+- `regulation-check-api` running on port 8000
+- `regulation-check-engine` running on port 8001 (for SSE chat stream)
 
 ---
 
@@ -101,7 +101,7 @@ palan-web/
 ### 1. Install dependencies
 
 ```bash
-cd palan-web
+cd regulation-check-web
 npm install
 ```
 
@@ -159,7 +159,7 @@ App is live at `http://localhost:3000`.
 
 ## Chat page — SSE event flow
 
-The `/chat` page connects directly to `palan-engine` and processes a stream of SSE events:
+The `/chat` page connects directly to `regulation-check-engine` and processes a stream of SSE events:
 
 | Event | What the UI does |
 |-------|-----------------|
@@ -211,6 +211,6 @@ npm run lint
 
 | Service | Port | Role |
 |---------|------|------|
-| `palan-web` | 3000 | This service — Next.js frontend |
-| `palan-api` | 8000 | REST API + auth + DB |
-| `palan-engine` | 8001 | LangGraph AI engine + SSE streaming |
+| `regulation-check-web` | 3000 | This service — Next.js frontend |
+| `regulation-check-api` | 8000 | REST API + auth + DB |
+| `regulation-check-engine` | 8001 | LangGraph AI engine + SSE streaming |

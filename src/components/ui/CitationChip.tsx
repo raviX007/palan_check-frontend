@@ -24,19 +24,19 @@ interface CitationChipProps {
 
 /**
  * Anything clickable is a real <a> or <button> — never a div/span with onClick.
- * Hover (accent border + accent-ink text) lives in globals.css (.palan-cite).
+ * Hover (accent border + accent-ink text) lives in globals.css (.rc-cite).
  */
 export function CitationChip({ children, href, onClick, title }: CitationChipProps) {
   if (href) {
     return (
-      <a className="palan-cite" href={href} title={title} style={CHIP}>
+      <a className="rc-cite" href={href} title={title} style={CHIP}>
         {children}
       </a>
     );
   }
   if (onClick) {
     return (
-      <button className="palan-cite" type="button" onClick={onClick} title={title}
+      <button className="rc-cite" type="button" onClick={onClick} title={title}
         style={{ ...CHIP, cursor: "pointer" }}>
         {children}
       </button>

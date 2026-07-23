@@ -49,14 +49,14 @@ export function Sidebar() {
   const isAdmin = user?.publicMetadata?.role === "admin";
 
   return (
-    <aside className="palan-sidebar">
+    <aside className="rc-sidebar">
       <Link href="/" style={{ ...s.logo, textDecoration: "none" }}>
         <div style={s.mark}>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--on-accent)" strokeWidth="2">
             <path d="M12 3L1 9l11 6 9-4.91V17M4 11.16V17l8 4 8-4v-5.84" />
           </svg>
         </div>
-        <span style={s.name}>Palan Check</span>
+        <span style={s.name}>RegulationCheck</span>
       </Link>
 
       <nav style={s.nav} aria-label="Primary">
@@ -68,7 +68,7 @@ export function Sidebar() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className="palan-navlink"
+              className="rc-navlink"
               style={s.item(active)}
             >
               {icon}
@@ -83,14 +83,14 @@ export function Sidebar() {
         <CompanySwitcher />
       </div>
 
-      {/* Recent chats stay hidden until palan-api stores conversation history —
+      {/* Recent chats stay hidden until regulation-check-api stores conversation history —
           showing sample questions here reads as this tenant's own activity. */}
 
       <div style={s.spacer} />
 
       <div style={s.bottom}>
         {isAdmin && (
-          <Link href="/eval" className="palan-navlink" style={s.bottomItem}>
+          <Link href="/eval" className="rc-navlink" style={s.bottomItem}>
             Eval Suite
           </Link>
         )}
@@ -98,7 +98,7 @@ export function Sidebar() {
         <a
           href="#"
           title="Product guide, scoring methodology and FAQs"
-          className="palan-navlink"
+          className="rc-navlink"
           style={s.bottomItem}
         >
           Help &amp; documentation

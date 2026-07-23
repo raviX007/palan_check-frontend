@@ -3,10 +3,10 @@ import type { Level } from "@/components/ui/Badge";
 /**
  * Reports are derived from the engine's own analysis of THIS tenant's
  * documents — the `domain_scores` payload the chat page persists to
- * `palan_scores_<tenant_id>`. Nothing here is fabricated: if the engine has
+ * `rc_scores_<tenant_id>`. Nothing here is fabricated: if the engine has
  * not scored anything yet, there is no report and the UI shows an empty state.
  *
- * TODO: move to GET /reports once palan-api exposes it; localStorage is a
+ * TODO: move to GET /reports once regulation-check-api exposes it; localStorage is a
  * stopgap that only sees assessments made in this browser.
  */
 
@@ -89,7 +89,7 @@ export function jurisdictionPill(jurisdiction: string | undefined): string {
 export function readStoredScores(tenantId: string): StoredScores | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(`palan_scores_${tenantId}`);
+    const raw = localStorage.getItem(`rc_scores_${tenantId}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredScores;
     if (!parsed?.scores) return null;

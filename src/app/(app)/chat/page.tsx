@@ -316,7 +316,7 @@ export default function ChatPage() {
                 if (domainScores && tenant?.id) {
                   try {
                     localStorage.setItem(
-                      `palan_scores_${tenant.id}`,
+                      `rc_scores_${tenant.id}`,
                       JSON.stringify({
                         scores: domainScores,
                         updatedAt: new Date().toISOString(),
@@ -429,7 +429,7 @@ export default function ChatPage() {
                     key={q}
                     type="button"
                     onClick={() => send(q)}
-                    className="palan-suggest-chip"
+                    className="rc-suggest-chip"
                     style={{
                       fontSize: 12.5,
                       color: "var(--muted)",
@@ -521,7 +521,7 @@ export default function ChatPage() {
                                   borderRadius: "50%",
                                   background: "var(--accent)",
                                   flexShrink: 0,
-                                  animation: "palan-pulse 1.2s ease-in-out infinite",
+                                  animation: "rc-pulse 1.2s ease-in-out infinite",
                                 }}
                               />
                               <span style={{ fontWeight: 500 }}>
@@ -533,7 +533,7 @@ export default function ChatPage() {
                               <button
                                 type="button"
                                 onClick={stopStreaming}
-                                className="palan-stop-btn"
+                                className="rc-stop-btn"
                                 style={{
                                   fontSize: 11.5,
                                   fontWeight: 500,
@@ -556,7 +556,7 @@ export default function ChatPage() {
                             type="button"
                             onClick={() => toggleTrace(msg.id)}
                             aria-expanded={!!msg.traceOpen}
-                            className="palan-trace-toggle"
+                            className="rc-trace-toggle"
                             style={{
                               display: "flex",
                               alignItems: "center",
@@ -643,7 +643,7 @@ export default function ChatPage() {
                             height: 6,
                             background: "var(--faint)",
                             borderRadius: "50%",
-                            animation: "palan-bounce 1.4s infinite",
+                            animation: "rc-bounce 1.4s infinite",
                             animationDelay: `${delay}s`,
                           }}
                         />
@@ -662,7 +662,7 @@ export default function ChatPage() {
                             background: "var(--accent)",
                             marginLeft: 3,
                             verticalAlign: "text-bottom",
-                            animation: "palan-blink 1s steps(2) infinite",
+                            animation: "rc-blink 1s steps(2) infinite",
                           }}
                         />
                       )}
@@ -720,7 +720,7 @@ export default function ChatPage() {
                               type="button"
                               onClick={() => setSelectedScore({ domain, data: sc })}
                               aria-haspopup="dialog"
-                              className="palan-score-card"
+                              className="rc-score-card"
                               style={{
                                 background: "var(--surface)",
                                 border: "1px solid var(--border)",
@@ -894,7 +894,7 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={stopStreaming}
-                className="palan-btn palan-btn-secondary"
+                className="rc-btn rc-btn-secondary"
                 style={{
                   flexShrink: 0,
                   fontFamily: "var(--font-sans)",
@@ -916,7 +916,7 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => send(input)}
                 disabled={!input.trim()}
-                className={input.trim() ? "palan-btn palan-btn-primary" : undefined}
+                className={input.trim() ? "rc-btn rc-btn-primary" : undefined}
                 style={{
                   flexShrink: 0,
                   fontFamily: "var(--font-sans)",
